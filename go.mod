@@ -1,4 +1,4 @@
-module github.com/marten-seemann/qtls-go1-15
+module github.com/xiaotianfork/qtls-go1-15
 
 go 1.15
 
