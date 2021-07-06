@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	X "github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 func testClientHello(t *testing.T, serverConfig *Config, m handshakeMessage) {
@@ -420,11 +421,11 @@ func TestCipherSuitePreference(t *testing.T) {
 
 func TestCipherSuitePreferenceTLS13(t *testing.T) {
 	serverConfig := &Config{
-		CipherSuites: []uint16{TLS_AES_128_GCM_SHA256, TLS_CHACHA20_POLY1305_SHA256},
+		CipherSuites: []uint16{TLS_SM4_CCM_SM3, TLS_SM4_GCM_SM3},
 		Certificates: testConfig.Certificates,
 	}
 	clientConfig := &Config{
-		CipherSuites:       []uint16{TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_GCM_SHA256},
+		CipherSuites:       []uint16{TLS_SM4_CCM_SM3, TLS_SM4_GCM_SM3},
 		InsecureSkipVerify: true,
 	}
 	state, _, err := testHandshake(t, clientConfig, serverConfig)
@@ -1699,7 +1700,7 @@ func TestCloneHash(t *testing.T) {
 	h1 := crypto.SHA256.New()
 	h1.Write([]byte("test"))
 	s1 := h1.Sum(nil)
-	h2 := cloneHash(h1, crypto.SHA256)
+	h2 := cloneHash(h1, X.SHA256)
 	s2 := h2.Sum(nil)
 	if !bytes.Equal(s1, s2) {
 		t.Error("cloned hash generated a different sum")

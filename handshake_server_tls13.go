@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"hash"
 	"io"
 	"sync/atomic"
@@ -362,7 +363,7 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 // cloneHash uses the encoding.BinaryMarshaler and encoding.BinaryUnmarshaler
 // interfaces implemented by standard library hashes to clone the state of in
 // to a new instance of h. It returns nil if the operation fails.
-func cloneHash(in hash.Hash, h crypto.Hash) hash.Hash {
+func cloneHash(in hash.Hash, h x509.Hash) hash.Hash {
 	// Recreate the interface to avoid importing encoding.
 	type binaryMarshaler interface {
 		MarshalBinary() (data []byte, err error)

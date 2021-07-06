@@ -5,10 +5,10 @@
 package qtls
 
 import (
-	"crypto"
 	"crypto/elliptic"
 	"crypto/hmac"
 	"errors"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"hash"
 	"io"
 	"math/big"
@@ -33,7 +33,7 @@ const (
 )
 
 // HkdfExtract generates a pseudorandom key for use with Expand from an input secret and an optional independent salt.
-func HkdfExtract(hash crypto.Hash, newSecret, currentSecret []byte) []byte {
+func HkdfExtract(hash x509.Hash, newSecret, currentSecret []byte) []byte {
 	if newSecret == nil {
 		newSecret = make([]byte, hash.Size())
 	}
@@ -41,11 +41,11 @@ func HkdfExtract(hash crypto.Hash, newSecret, currentSecret []byte) []byte {
 }
 
 // HkdfExpandLabel HKDF expands a label
-func HkdfExpandLabel(hash crypto.Hash, secret, hashValue []byte, label string, L int) []byte {
+func HkdfExpandLabel(hash x509.Hash, secret, hashValue []byte, label string, L int) []byte {
 	return hkdfExpandLabel(hash, secret, hashValue, label, L)
 }
 
-func hkdfExpandLabel(hash crypto.Hash, secret, context []byte, label string, length int) []byte {
+func hkdfExpandLabel(hash x509.Hash, secret, context []byte, label string, length int) []byte {
 	var hkdfLabel cryptobyte.Builder
 	hkdfLabel.AddUint16(uint16(length))
 	hkdfLabel.AddUint8LengthPrefixed(func(b *cryptobyte.Builder) {

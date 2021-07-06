@@ -1475,6 +1475,8 @@ func initDefaultCipherSuites() {
 			TLS_AES_128_GCM_SHA256,
 			TLS_CHACHA20_POLY1305_SHA256,
 			TLS_AES_256_GCM_SHA384,
+			TLS_SM4_GCM_SM3,
+			TLS_SM4_CCM_SM3,
 		}
 	} else {
 		// Without AES-GCM hardware, we put the ChaCha20-Poly1305
@@ -1491,6 +1493,8 @@ func initDefaultCipherSuites() {
 			TLS_CHACHA20_POLY1305_SHA256,
 			TLS_AES_128_GCM_SHA256,
 			TLS_AES_256_GCM_SHA384,
+			TLS_SM4_GCM_SM3,
+			TLS_SM4_CCM_SM3,
 		}
 	}
 
