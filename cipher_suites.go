@@ -12,12 +12,11 @@ import (
 	"crypto/rc4"
 	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/x509"
 	"fmt"
 	"github.com/xiaotianfork/qtls-go1-15/sm4"
 	"hash"
 
-	X "github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
@@ -56,11 +55,12 @@ func CipherSuites() []*CipherSuite {
 		{TLS_RSA_WITH_AES_128_GCM_SHA256, "TLS_RSA_WITH_AES_128_GCM_SHA256", supportedOnlyTLS12, false},
 		{TLS_RSA_WITH_AES_256_GCM_SHA384, "TLS_RSA_WITH_AES_256_GCM_SHA384", supportedOnlyTLS12, false},
 
+		{TLS_SM4_GCM_SM3, "TLS_SM4_GCM_SM3", supportedOnlyTLS13, false},
+		{TLS_SM4_CCM_SM3, "TLS_SM4_CCM_SM3", supportedOnlyTLS13, false},
+
 		{TLS_AES_128_GCM_SHA256, "TLS_AES_128_GCM_SHA256", supportedOnlyTLS13, false},
 		{TLS_AES_256_GCM_SHA384, "TLS_AES_256_GCM_SHA384", supportedOnlyTLS13, false},
 		{TLS_CHACHA20_POLY1305_SHA256, "TLS_CHACHA20_POLY1305_SHA256", supportedOnlyTLS13, false},
-		{TLS_SM4_GCM_SM3, "TLS_SM4_GCM_SM3", supportedOnlyTLS13, false},
-		{TLS_SM4_CCM_SM3, "TLS_SM4_CCM_SM3", supportedOnlyTLS13, false},
 
 		{TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA", supportedUpToTLS12, false},
 		{TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA", supportedUpToTLS12, false},
@@ -220,13 +220,13 @@ type cipherSuiteTLS13 struct {
 	id     uint16
 	keyLen int
 	aead   func(key, fixedNonce []byte) aead
-	hash   X.Hash
+	hash   x509.Hash
 }
 
 type CipherSuiteTLS13 struct {
 	ID     uint16
 	KeyLen int
-	Hash   X.Hash
+	Hash   x509.Hash
 	AEAD   func(key, fixedNonce []byte) cipher.AEAD
 }
 
@@ -235,11 +235,11 @@ func (c *CipherSuiteTLS13) IVLen() int {
 }
 
 var cipherSuitesTLS13 = []*cipherSuiteTLS13{
-	{TLS_AES_128_GCM_SHA256, 16, aeadAESGCMTLS13, X.SHA256},
-	{TLS_CHACHA20_POLY1305_SHA256, 32, aeadChaCha20Poly1305, X.SHA256},
-	{TLS_AES_256_GCM_SHA384, 32, aeadAESGCMTLS13, X.SHA384},
-	{TLS_SM4_GCM_SM3, 32, aeadSm4GCMTLS13, X.SM3},
-	{TLS_SM4_CCM_SM3, 32, aeadSm4GCMTLS13, X.SM3},
+	{TLS_AES_128_GCM_SHA256, 16, aeadAESGCMTLS13, x509.SHA256},
+	{TLS_CHACHA20_POLY1305_SHA256, 32, aeadChaCha20Poly1305, x509.SHA256},
+	{TLS_AES_256_GCM_SHA384, 32, aeadAESGCMTLS13, x509.SHA384},
+	{TLS_SM4_GCM_SM3, 16, aeadSm4GCMTLS13, x509.SM3},
+	{TLS_SM4_CCM_SM3, 16, aeadSm4GCMTLS13, x509.SM3},
 }
 
 func cipherRC4(key, iv []byte, isRead bool) interface{} {

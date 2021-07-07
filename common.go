@@ -15,7 +15,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha512"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"golang.org/x/sys/cpu"
 )
 
@@ -381,8 +381,6 @@ const (
 
 // ClientHelloInfo contains information from a ClientHello message in order to
 // guide application logic in the GetCertificate and GetConfigForClient callbacks.
-type ClientHelloInfo = tls.ClientHelloInfo
-
 type clientHelloInfo struct {
 	// CipherSuites lists the CipherSuites supported by the client (e.g.
 	// TLS_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256).
@@ -429,13 +427,26 @@ type clientHelloInfo struct {
 
 	// config is embedded by the GetCertificate or GetConfigForClient caller,
 	// for use with SupportsCertificate.
-	config *Config
+	config *config
 }
 
 // CertificateRequestInfo contains information from a server's
 // CertificateRequest message, which is used to demand a certificate and proof
 // of control from a client.
-type CertificateRequestInfo = tls.CertificateRequestInfo
+type CertificateRequestInfo struct {
+	// AcceptableCAs contains zero or more, DER-encoded, X.501
+	// Distinguished Names. These are the names of root or intermediate CAs
+	// that the server wishes the returned certificate to be signed by. An
+	// empty slice indicates that the server has no preference.
+	AcceptableCAs [][]byte
+
+	// SignatureSchemes lists the signature schemes that the server is
+	// willing to verify.
+	SignatureSchemes []SignatureScheme
+
+	// Version is the TLS version that was negotiated for this connection.
+	Version uint16
+}
 
 // RenegotiationSupport enumerates the different levels of support for TLS
 // renegotiation. TLS renegotiation is the act of performing subsequent
@@ -470,7 +481,6 @@ const (
 // After one has been passed to a TLS function it must not be
 // modified. A Config may be reused; the tls package will also not
 // modify it.
-type Config = tls.Config
 
 type config struct {
 	// Rand provides the source of entropy for nonces and RSA blinding.
@@ -512,7 +522,7 @@ type config struct {
 	// If GetCertificate is nil or returns nil, then the certificate is
 	// retrieved from NameToCertificate. If NameToCertificate is nil, the
 	// best element of Certificates will be used.
-	GetCertificate func(*ClientHelloInfo) (*Certificate, error)
+	GetCertificate func(info *clientHelloInfo) (*Certificate, error)
 
 	// GetClientCertificate, if not nil, is called when a server requests a
 	// certificate from a client. If set, the contents of Certificates will
@@ -542,7 +552,7 @@ type config struct {
 	// SetSessionTicketKeys was called on the returned Config, those keys will
 	// be used. Otherwise, the original Config keys will be used (and possibly
 	// rotated if they are automatically managed).
-	GetConfigForClient func(*ClientHelloInfo) (*Config, error)
+	GetConfigForClient func(info *clientHelloInfo) (*config, error)
 
 	// VerifyPeerCertificate, if not nil, is called after normal
 	// certificate verification by either a TLS client or server. It
@@ -1072,7 +1082,7 @@ var errNoCertificates = errors.New("tls: no certificates configured")
 
 // getCertificate returns the best certificate for the given ClientHelloInfo,
 // defaulting to the first element of c.Certificates.
-func (c *config) getCertificate(clientHello *ClientHelloInfo) (*Certificate, error) {
+func (c *config) getCertificate(clientHello *clientHelloInfo) (*Certificate, error) {
 	if c.GetCertificate != nil &&
 		(len(c.Certificates) == 0 || len(clientHello.ServerName) > 0) {
 		cert, err := c.GetCertificate(clientHello)
@@ -1132,11 +1142,11 @@ func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
 	// signatures on the chain (which anyway are a SHOULD, see RFC 8446,
 	// Section 4.4.2.2).
 
-	config := chi.config
-	if config == nil {
-		config = &Config{}
+	config1 := chi.config
+	if config1 == nil {
+		config1 = &config{}
 	}
-	conf := fromConfig(config)
+	conf := config1
 	vers, ok := conf.mutualVersion(chi.SupportedVersions)
 	if !ok {
 		return errors.New("no mutually supported protocol versions")
@@ -1277,6 +1287,38 @@ func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
 	return nil
 }
 
+// SupportsCertificate returns nil if the provided certificate is supported by
+// the server that sent the CertificateRequest. Otherwise, it returns an error
+// describing the reason for the incompatibility.
+func (cri *CertificateRequestInfo) SupportsCertificate(c *Certificate) error {
+	if _, err := selectSignatureScheme(cri.Version, c, cri.SignatureSchemes); err != nil {
+		return err
+	}
+
+	if len(cri.AcceptableCAs) == 0 {
+		return nil
+	}
+
+	for j, cert := range c.Certificate {
+		x509Cert := c.Leaf
+		// Parse the certificate if this isn't the leaf node, or if
+		// chain.Leaf was nil.
+		if j != 0 || x509Cert == nil {
+			var err error
+			if x509Cert, err = x509.ParseCertificate(cert); err != nil {
+				return fmt.Errorf("failed to parse certificate #%d in the chain: %w", j, err)
+			}
+		}
+
+		for _, ca := range cri.AcceptableCAs {
+			if bytes.Equal(x509Cert.RawIssuer, ca) {
+				return nil
+			}
+		}
+	}
+	return errors.New("chain is not signed by an acceptable CA")
+}
+
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate
 // from the CommonName and SubjectAlternateName fields of each of the leaf
 // certificates.
@@ -1329,7 +1371,27 @@ func (c *config) writeKeyLog(label string, clientRandom, secret []byte) error {
 var writerMutex sync.Mutex
 
 // A Certificate is a chain of one or more certificates, leaf first.
-type Certificate = tls.Certificate
+type Certificate struct {
+	Certificate [][]byte
+	// PrivateKey contains the private key corresponding to the public key in
+	// Leaf. This must implement crypto.Signer with an RSA, ECDSA or Ed25519 PublicKey.
+	// For a server up to TLS 1.2, it can also implement crypto.Decrypter with
+	// an RSA PublicKey.
+	PrivateKey crypto.PrivateKey
+	// SupportedSignatureAlgorithms is an optional list restricting what
+	// signature algorithms the PrivateKey can be used for.
+	SupportedSignatureAlgorithms []SignatureScheme
+	// OCSPStaple contains an optional OCSP response which will be served
+	// to clients that request it.
+	OCSPStaple []byte
+	// SignedCertificateTimestamps contains an optional list of Signed
+	// Certificate Timestamps which will be served to clients that request it.
+	SignedCertificateTimestamps [][]byte
+	// Leaf is the parsed form of the leaf certificate, which may be initialized
+	// using x509.ParseCertificate to reduce per-handshake processing. If nil,
+	// the leaf certificate will be parsed as needed.
+	Leaf *x509.Certificate
+}
 
 // leaf returns the parsed leaf certificate, either from c.Leaf or by parsing
 // the corresponding c.Certificate[0].
@@ -1422,9 +1484,9 @@ func (c *lruSessionCache) Get(sessionKey string) (*ClientSessionState, bool) {
 	return nil, false
 }
 
-var emptyConfig Config
+var emptyConfig config
 
-func defaultConfig() *Config {
+func defaultConfig() *config {
 	return &emptyConfig
 }
 

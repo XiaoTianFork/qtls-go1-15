@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +20,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 var rsaCertPEM = `-----BEGIN CERTIFICATE-----
@@ -105,15 +106,10 @@ y2CCchQP2LJh2Hw=
 -----END CERTIFICATE-----
 `
 
-var sm2KeyPEM = testingKey(`-----BEGIN EC PARAMETERS-----
-BggqgRzPVQGCLQ==
------END EC PARAMETERS-----
------BEGIN EC PRIVATE KEY-----
+var sm2KeyPEM = testingKey(`
 MHcCAQEEIKd8IpFgNnD9lTIr1eE8dD72HNTkTA2cSBSdRo+LCuuToAoGCCqBHM9V
 AYItoUQDQgAED2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlq
-QMJnw6yPPOxWivHSrdH04YMShezq3lDyxg==
------END EC PRIVATE KEY-----
-`)
+QMJnw6yPPOxWivHSrdH04YMShezq3lDyxg==`)
 
 var keyPairTests = []struct {
 	algo string
@@ -323,7 +319,7 @@ func TestDialer(t *testing.T) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	d := Dialer{Config: &Config{
+	d := Dialer{Config: &config{
 		Rand: readerFunc(func(b []byte) (n int, err error) {
 			// By the time crypto/tls wants randomness, that means it has a TCP
 			// connection, so we're past the Dialer's dial and now blocked
@@ -515,7 +511,7 @@ func TestVerifyHostname(t *testing.T) {
 		t.Fatalf("verify www.yahoo.com succeeded")
 	}
 
-	c, err = Dial("tcp", "www.google.com:https", &Config{InsecureSkipVerify: true}, nil)
+	c, err = Dial("tcp", "www.google.com:https", &config{InsecureSkipVerify: true}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -766,12 +762,12 @@ func TestCloneFuncFields(t *testing.T) {
 	const expectedCount = 6
 	called := 0
 
-	c1 := Config{
+	c1 := config{
 		Time: func() time.Time {
 			called |= 1 << 0
 			return time.Time{}
 		},
-		GetCertificate: func(*ClientHelloInfo) (*Certificate, error) {
+		GetCertificate: func(info *clientHelloInfo) (*Certificate, error) {
 			called |= 1 << 1
 			return nil, nil
 		},
@@ -779,7 +775,7 @@ func TestCloneFuncFields(t *testing.T) {
 			called |= 1 << 2
 			return nil, nil
 		},
-		GetConfigForClient: func(*ClientHelloInfo) (*Config, error) {
+		GetConfigForClient: func(*clientHelloInfo) (*config, error) {
 			called |= 1 << 3
 			return nil, nil
 		},
@@ -808,7 +804,7 @@ func TestCloneFuncFields(t *testing.T) {
 }
 
 func TestCloneNonFuncFields(t *testing.T) {
-	var c1 Config
+	var c1 config
 	v := reflect.ValueOf(&c1).Elem()
 
 	typ := v.Type()
@@ -865,7 +861,7 @@ func TestCloneNonFuncFields(t *testing.T) {
 		}
 	}
 	// Set the unexported fields related to session ticket keys, which are copied with Clone().
-	conf1 := fromConfig(&c1)
+	conf1 := &c1
 	conf1.autoSessionTicketKeys = []ticketKey{conf1.ticketKeyFromBytes(conf1.SessionTicketKey)}
 	conf1.sessionTicketKeys = []ticketKey{conf1.ticketKeyFromBytes(conf1.SessionTicketKey)}
 
@@ -1173,7 +1169,7 @@ func TestConnectionState(t *testing.T) {
 			name = "TLSv13"
 		}
 		t.Run(name, func(t *testing.T) {
-			config := &Config{
+			config := &config{
 				Time:         now,
 				Rand:         zeroSource{},
 				Certificates: make([]Certificate, 1),
@@ -1309,101 +1305,111 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 		PrivateKey:  testEd25519PrivateKey,
 	}
 
+	sm2Cert := &Certificate{
+		Certificate: [][]byte{sm2Certificate},
+		PrivateKey:  sm2PrivateKey,
+	}
+
 	tests := []struct {
 		c       *Certificate
-		chi     *ClientHelloInfo
+		chi     *clientHelloInfo
 		wantErr string
 	}{
-		{rsaCert, &ClientHelloInfo{
+		{sm2Cert, &clientHelloInfo{
+			ServerName:        "",
+			SignatureSchemes:  []SignatureScheme{PSSWithSHA256},
+			SupportedVersions: []uint16{VersionTLS13},
+		}, ""},
+		{rsaCert, &clientHelloInfo{
 			ServerName:        "example.golang",
 			SignatureSchemes:  []SignatureScheme{PSSWithSHA256},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, ""},
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			SignatureSchemes:  []SignatureScheme{PSSWithSHA256, ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS13, VersionTLS12},
 		}, ""},
-		{rsaCert, &ClientHelloInfo{
+		{rsaCert, &clientHelloInfo{
 			ServerName:        "example.com",
 			SignatureSchemes:  []SignatureScheme{PSSWithSHA256},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, "not valid for requested server name"},
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP384AndSHA384},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, "signature algorithms"},
-		{pkcs1Cert, &ClientHelloInfo{
+		{pkcs1Cert, &clientHelloInfo{
 			SignatureSchemes:  []SignatureScheme{PSSWithSHA256, ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, "signature algorithms"},
 
-		{rsaCert, &ClientHelloInfo{
+		{rsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 			SignatureSchemes:  []SignatureScheme{PKCS1WithSHA1},
 			SupportedVersions: []uint16{VersionTLS13, VersionTLS12},
 		}, "signature algorithms"},
-		{rsaCert, toClientHelloInfo(&clientHelloInfo{
+		{rsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 			SignatureSchemes:  []SignatureScheme{PKCS1WithSHA1},
 			SupportedVersions: []uint16{VersionTLS13, VersionTLS12},
-			config: &Config{
+			config: &config{
 				MaxVersion: VersionTLS12,
 			},
-		}), ""}, // Check that mutual version selection works.
+		}, ""}, // Check that mutual version selection works.
 
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, ""},
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP384AndSHA384},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, ""}, // TLS 1.2 does not restrict curves based on the SignatureScheme.
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  nil,
 			SupportedVersions: []uint16{VersionTLS12},
 		}, ""}, // TLS 1.2 comes with default signature schemes.
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, "cipher suite"},
-		{ecdsaCert, toClientHelloInfo(&clientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS12},
-			config: &Config{
+			config: &config{
 				CipherSuites: []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 			},
-		}), "cipher suite"},
-		{ecdsaCert, &ClientHelloInfo{
+		}, "cipher suite"},
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP384},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, "certificate curve"},
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{1},
 			SignatureSchemes:  []SignatureScheme{ECDSAWithP256AndSHA256},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, "doesn't support ECDHE"},
-		{ecdsaCert, &ClientHelloInfo{
+		{ecdsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
@@ -1411,21 +1417,21 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 			SupportedVersions: []uint16{VersionTLS12},
 		}, "signature algorithms"},
 
-		{ed25519Cert, &ClientHelloInfo{
+		{ed25519Cert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256}, // only relevant for ECDHE support
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{Ed25519},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, ""},
-		{ed25519Cert, &ClientHelloInfo{
+		{ed25519Cert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{CurveP256}, // only relevant for ECDHE support
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SignatureSchemes:  []SignatureScheme{Ed25519},
 			SupportedVersions: []uint16{VersionTLS10},
 		}, "doesn't support Ed25519"},
-		{ed25519Cert, &ClientHelloInfo{
+		{ed25519Cert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256},
 			SupportedCurves:   []CurveID{},
 			SupportedPoints:   []uint8{pointFormatUncompressed},
@@ -1433,13 +1439,13 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 			SupportedVersions: []uint16{VersionTLS12},
 		}, "doesn't support ECDHE"},
 
-		{rsaCert, &ClientHelloInfo{
+		{rsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
 			SupportedCurves:   []CurveID{CurveP256}, // only relevant for ECDHE support
 			SupportedPoints:   []uint8{pointFormatUncompressed},
 			SupportedVersions: []uint16{VersionTLS10},
 		}, ""},
-		{rsaCert, &ClientHelloInfo{
+		{rsaCert, &clientHelloInfo{
 			CipherSuites:      []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 			SupportedVersions: []uint16{VersionTLS12},
 		}, ""}, // static RSA fallback

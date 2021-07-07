@@ -11,7 +11,6 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/subtle"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +19,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"golang.org/x/crypto/cryptobyte"
 )
 
@@ -171,7 +171,7 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, ecdheParameters, error) {
 
 func (c *Conn) clientHandshake() (err error) {
 	if c.config == nil {
-		c.config = fromConfig(defaultConfig())
+		c.config = defaultConfig()
 	}
 	c.setAlternativeRecordLayer()
 

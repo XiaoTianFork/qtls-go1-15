@@ -2,12 +2,13 @@ package qtls
 
 import (
 	"bytes"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 func TestUnsafeConversionIsSafe(t *testing.T) {

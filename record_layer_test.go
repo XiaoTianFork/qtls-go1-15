@@ -321,8 +321,8 @@ func TestRejectConfigWithOldMaxVersion(t *testing.T) {
 			).Handshake()
 		}()
 
-		config := testConfig.Clone()
-		config.GetConfigForClient = func(*ClientHelloInfo) (*Config, error) {
+		config1 := testConfig.Clone()
+		config1.GetConfigForClient = func(*clientHelloInfo) (*config, error) {
 			conf := testConfig.Clone()
 			conf.MaxVersion = VersionTLS12
 			return conf, nil
@@ -330,7 +330,7 @@ func TestRejectConfigWithOldMaxVersion(t *testing.T) {
 		serverRecordLayer := &recordLayer{in: out, out: in}
 		err := Server(
 			&unusedConn{},
-			config,
+			config1,
 			&ExtraConfig{AlternativeRecordLayer: serverRecordLayer},
 		).Handshake()
 		if err == nil || err.Error() != "tls: MaxVersion prevents QUIC from using TLS 1.3" {

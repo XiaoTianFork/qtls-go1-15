@@ -23,11 +23,11 @@ import (
 	X "github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
-func testClientHello(t *testing.T, serverConfig *Config, m handshakeMessage) {
+func testClientHello(t *testing.T, serverConfig *config, m handshakeMessage) {
 	testClientHelloFailure(t, serverConfig, m, "")
 }
 
-func testClientHelloFailure(t *testing.T, serverConfig *Config, m handshakeMessage, expectedSubStr string) {
+func testClientHelloFailure(t *testing.T, serverConfig *config, m handshakeMessage, expectedSubStr string) {
 	c, s := localPipe(t)
 	go func() {
 		cli := Client(c, testConfig, nil)
@@ -374,11 +374,11 @@ func TestClose(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	serverConfig := &Config{
+	serverConfig := &config{
 		Certificates: testConfig.Certificates,
 		MaxVersion:   VersionTLS11,
 	}
-	clientConfig := &Config{
+	clientConfig := &config{
 		InsecureSkipVerify: true,
 	}
 	state, _, err := testHandshake(t, clientConfig, serverConfig)
@@ -391,12 +391,12 @@ func TestVersion(t *testing.T) {
 }
 
 func TestCipherSuitePreference(t *testing.T) {
-	serverConfig := &Config{
+	serverConfig := &config{
 		CipherSuites: []uint16{TLS_RSA_WITH_RC4_128_SHA, TLS_RSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_RC4_128_SHA},
 		Certificates: testConfig.Certificates,
 		MaxVersion:   VersionTLS11,
 	}
-	clientConfig := &Config{
+	clientConfig := &config{
 		CipherSuites:       []uint16{TLS_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_RC4_128_SHA},
 		InsecureSkipVerify: true,
 	}
@@ -420,19 +420,19 @@ func TestCipherSuitePreference(t *testing.T) {
 }
 
 func TestCipherSuitePreferenceTLS13(t *testing.T) {
-	serverConfig := &Config{
-		CipherSuites: []uint16{TLS_SM4_CCM_SM3, TLS_SM4_GCM_SM3},
+	serverConfig := &config{
+		CipherSuites: []uint16{TLS_SM4_CCM_SM3,TLS_SM4_GCM_SM3},
 		Certificates: testConfig.Certificates,
 	}
-	clientConfig := &Config{
-		CipherSuites:       []uint16{TLS_SM4_CCM_SM3, TLS_SM4_GCM_SM3},
+	clientConfig := &config{
+		CipherSuites:       []uint16{TLS_SM4_GCM_SM3, TLS_SM4_CCM_SM3},
 		InsecureSkipVerify: true,
 	}
 	state, _, err := testHandshake(t, clientConfig, serverConfig)
 	if err != nil {
 		t.Fatalf("handshake failed: %s", err)
 	}
-	if state.CipherSuite != TLS_CHACHA20_POLY1305_SHA256 {
+	if state.CipherSuite != TLS_SM4_GCM_SM3 {
 		// By default the server should use the client's preference.
 		t.Fatalf("Client's preference was not used, got %x", state.CipherSuite)
 	}
@@ -442,7 +442,7 @@ func TestCipherSuitePreferenceTLS13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handshake failed: %s", err)
 	}
-	if state.CipherSuite != TLS_AES_128_GCM_SHA256 {
+	if state.CipherSuite != TLS_SM4_CCM_SM3 {
 		t.Fatalf("Server's preference was not used, got %x", state.CipherSuite)
 	}
 }
@@ -454,7 +454,7 @@ func TestSCTHandshake(t *testing.T) {
 
 func testSCTHandshake(t *testing.T, version uint16) {
 	expected := [][]byte{[]byte("certificate"), []byte("transparency")}
-	serverConfig := &Config{
+	serverConfig := &config{
 		Certificates: []Certificate{{
 			Certificate:                 [][]byte{testRSACertificate},
 			PrivateKey:                  testRSAPrivateKey,
@@ -462,7 +462,7 @@ func testSCTHandshake(t *testing.T, version uint16) {
 		}},
 		MaxVersion: version,
 	}
-	clientConfig := &Config{
+	clientConfig := &config{
 		InsecureSkipVerify: true,
 	}
 	_, state, err := testHandshake(t, clientConfig, serverConfig)
@@ -486,11 +486,11 @@ func TestCrossVersionResume(t *testing.T) {
 }
 
 func testCrossVersionResume(t *testing.T, version uint16) {
-	serverConfig := &Config{
+	serverConfig := &config{
 		CipherSuites: []uint16{TLS_RSA_WITH_AES_128_CBC_SHA},
 		Certificates: testConfig.Certificates,
 	}
-	clientConfig := &Config{
+	clientConfig := &config{
 		CipherSuites:       []uint16{TLS_RSA_WITH_AES_128_CBC_SHA},
 		InsecureSkipVerify: true,
 		ClientSessionCache: NewLRUClientSessionCache(1),
@@ -559,7 +559,7 @@ type serverTest struct {
 	// certificates from the client.
 	expectedPeerCerts []string
 	// config, if not nil, contains a custom Config to use for this test.
-	config *Config
+	config *config
 	// expectHandshakeErrorIncluding, when not empty, contains a string
 	// that must be a substring of the error resulting from the handshake.
 	expectHandshakeErrorIncluding string
@@ -1003,7 +1003,7 @@ func TestHandshakeServerSNIGetCertificate(t *testing.T) {
 	// Replace the NameToCertificate map with a GetCertificate function
 	nameToCert := config.NameToCertificate
 	config.NameToCertificate = nil
-	config.GetCertificate = func(clientHello *ClientHelloInfo) (*Certificate, error) {
+	config.GetCertificate = func(clientHello *clientHelloInfo) (*Certificate, error) {
 		cert := nameToCert[clientHello.ServerName]
 		return cert, nil
 	}
@@ -1022,7 +1022,7 @@ func TestHandshakeServerSNIGetCertificate(t *testing.T) {
 func TestHandshakeServerSNIGetCertificateNotFound(t *testing.T) {
 	config := testConfig.Clone()
 
-	config.GetCertificate = func(clientHello *ClientHelloInfo) (*Certificate, error) {
+	config.GetCertificate = func(clientHello *clientHelloInfo) (*Certificate, error) {
 		return nil, nil
 	}
 	test := &serverTest{
@@ -1039,7 +1039,7 @@ func TestHandshakeServerSNIGetCertificateError(t *testing.T) {
 	const errMsg = "TestHandshakeServerSNIGetCertificateError error"
 
 	serverConfig := testConfig.Clone()
-	serverConfig.GetCertificate = func(clientHello *ClientHelloInfo) (*Certificate, error) {
+	serverConfig.GetCertificate = func(clientHello *clientHelloInfo) (*Certificate, error) {
 		return nil, errors.New(errMsg)
 	}
 
@@ -1059,7 +1059,7 @@ func TestHandshakeServerEmptyCertificates(t *testing.T) {
 	const errMsg = "TestHandshakeServerEmptyCertificates error"
 
 	serverConfig := testConfig.Clone()
-	serverConfig.GetCertificate = func(clientHello *ClientHelloInfo) (*Certificate, error) {
+	serverConfig.GetCertificate = func(clientHello *clientHelloInfo) (*Certificate, error) {
 		return nil, errors.New(errMsg)
 	}
 	serverConfig.Certificates = nil
@@ -1196,7 +1196,7 @@ func TestServerResumptionDisabled(t *testing.T) {
 }
 
 func TestFallbackSCSV(t *testing.T) {
-	serverConfig := Config{
+	serverConfig := config{
 		Certificates: testConfig.Certificates,
 	}
 	test := &serverTest{
@@ -1501,14 +1501,14 @@ func TestSNIGivenOnFailure(t *testing.T) {
 }
 
 var getConfigForClientTests = []struct {
-	setup          func(config *Config)
-	callback       func(clientHello *ClientHelloInfo) (*Config, error)
+	setup          func(config *config)
+	callback       func(clientHello *clientHelloInfo) (*config, error)
 	errorSubstring string
-	verify         func(config *Config) error
+	verify         func(config *config) error
 }{
 	{
 		nil,
-		func(clientHello *ClientHelloInfo) (*Config, error) {
+		func(clientHello *clientHelloInfo) (*config, error) {
 			return nil, nil
 		},
 		"",
@@ -1516,7 +1516,7 @@ var getConfigForClientTests = []struct {
 	},
 	{
 		nil,
-		func(clientHello *ClientHelloInfo) (*Config, error) {
+		func(clientHello *clientHelloInfo) (*config, error) {
 			return nil, errors.New("should bubble up")
 		},
 		"should bubble up",
@@ -1524,7 +1524,7 @@ var getConfigForClientTests = []struct {
 	},
 	{
 		nil,
-		func(clientHello *ClientHelloInfo) (*Config, error) {
+		func(clientHello *clientHelloInfo) (*config, error) {
 			config := testConfig.Clone()
 			// Setting a maximum version of TLS 1.1 should cause
 			// the handshake to fail, as the client MinVersion is TLS 1.2.
@@ -1535,22 +1535,22 @@ var getConfigForClientTests = []struct {
 		nil,
 	},
 	{
-		func(config *Config) {
+		func(config *config) {
 			for i := range config.SessionTicketKey {
 				config.SessionTicketKey[i] = byte(i)
 			}
-			fromConfig(config).sessionTicketKeys = nil
+			config.sessionTicketKeys = nil
 		},
-		func(clientHello *ClientHelloInfo) (*Config, error) {
+		func(clientHello *clientHelloInfo) (*config, error) {
 			config := testConfig.Clone()
 			for i := range config.SessionTicketKey {
 				config.SessionTicketKey[i] = 0
 			}
-			fromConfig(config).sessionTicketKeys = nil
+			config.sessionTicketKeys = nil
 			return config, nil
 		},
 		"",
-		func(config *Config) error {
+		func(config *config) error {
 			if config.SessionTicketKey == [32]byte{} {
 				return fmt.Errorf("expected SessionTicketKey to be set")
 			}
@@ -1558,7 +1558,7 @@ var getConfigForClientTests = []struct {
 		},
 	},
 	{
-		func(config *Config) {
+		func(config *config) {
 			var dummyKey [32]byte
 			for i := range dummyKey {
 				dummyKey[i] = byte(i)
@@ -1566,13 +1566,13 @@ var getConfigForClientTests = []struct {
 
 			config.SetSessionTicketKeys([][32]byte{dummyKey})
 		},
-		func(clientHello *ClientHelloInfo) (*Config, error) {
+		func(clientHello *clientHelloInfo) (*config, error) {
 			config := testConfig.Clone()
-			fromConfig(config).sessionTicketKeys = nil
+			config.sessionTicketKeys = nil
 			return config, nil
 		},
 		"",
-		func(config *Config) error {
+		func(config *config) error {
 			if config.SessionTicketKey == [32]byte{} {
 				return fmt.Errorf("expected SessionTicketKey to be set")
 			}
@@ -1591,8 +1591,8 @@ func TestGetConfigForClient(t *testing.T) {
 			test.setup(serverConfig)
 		}
 
-		var configReturned *Config
-		serverConfig.GetConfigForClient = func(clientHello *ClientHelloInfo) (*Config, error) {
+		var configReturned *config
+		serverConfig.GetConfigForClient = func(clientHello *clientHelloInfo) (*config, error) {
 			config, err := test.callback(clientHello)
 			configReturned = config
 			return config, err

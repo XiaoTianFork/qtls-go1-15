@@ -99,7 +99,7 @@ func TestCertificateSelection(t *testing.T) {
 	}
 
 	certificateForName := func(name string) *Certificate {
-		clientHello := &ClientHelloInfo{
+		clientHello := &clientHelloInfo{
 			ServerName: name,
 		}
 		if cert, err := config.getCertificate(clientHello); err != nil {
@@ -125,7 +125,7 @@ func TestCertificateSelection(t *testing.T) {
 }
 
 // Run with multiple crypto configs to test the logic for computing TLS record overheads.
-func runDynamicRecordSizingTest(t *testing.T, config *Config) {
+func runDynamicRecordSizingTest(t *testing.T, config *config) {
 	clientConn, serverConn := localPipe(t)
 
 	serverConfig := config.Clone()
@@ -275,8 +275,8 @@ func TestHairpinInClose(t *testing.T) {
 	defer client.Close()
 
 	conn := &hairpinConn{client, nil}
-	tlsConn := Server(conn, &Config{
-		GetCertificate: func(*ClientHelloInfo) (*Certificate, error) {
+	tlsConn := Server(conn, &config{
+		GetCertificate: func(*clientHelloInfo) (*Certificate, error) {
 			panic("unreachable")
 		},
 	}, nil)

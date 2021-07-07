@@ -9,10 +9,11 @@ import (
 	"crypto/md5"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 var errClientKeyExchange = errors.New("tls: invalid ClientKeyExchange message")

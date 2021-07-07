@@ -10,12 +10,13 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/subtle"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
 	"time"
+
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 // serverHandshakeState contains details of a server handshake in progress.
@@ -150,7 +151,7 @@ func (c *Conn) readClientHello() (*clientHelloMsg, error) {
 			c.sendAlert(alertInternalError)
 			return nil, err
 		} else if cfc != nil {
-			configForClient = fromConfig(cfc)
+			configForClient = cfc
 			c.config = configForClient
 		}
 	}
@@ -843,13 +844,13 @@ func (c *Conn) processCertsFromClient(certificate Certificate) error {
 	return nil
 }
 
-func newClientHelloInfo(c *Conn, clientHello *clientHelloMsg) *ClientHelloInfo {
+func newClientHelloInfo(c *Conn, clientHello *clientHelloMsg) *clientHelloInfo {
 	supportedVersions := clientHello.supportedVersions
 	if len(clientHello.supportedVersions) == 0 {
 		supportedVersions = supportedVersionsFromMax(clientHello.vers)
 	}
 
-	return toClientHelloInfo(&clientHelloInfo{
+	return &clientHelloInfo{
 		CipherSuites:      clientHello.cipherSuites,
 		ServerName:        clientHello.serverName,
 		SupportedCurves:   clientHello.supportedCurves,
@@ -858,6 +859,6 @@ func newClientHelloInfo(c *Conn, clientHello *clientHelloMsg) *ClientHelloInfo {
 		SupportedProtos:   clientHello.alpnProtocols,
 		SupportedVersions: supportedVersions,
 		Conn:              c.conn,
-		config:            toConfig(c.config),
-	})
+		config:            c.config,
+	}
 }

@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"crypto/cipher"
 	"crypto/subtle"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 // A Conn represents a secured connection.

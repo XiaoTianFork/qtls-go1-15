@@ -32,10 +32,10 @@ import (
 // using conn as the underlying transport.
 // The configuration config must be non-nil and must include
 // at least one certificate or else set GetCertificate.
-func Server(conn net.Conn, config *Config, extraConfig *ExtraConfig) *Conn {
+func Server(conn net.Conn, config *config, extraConfig *ExtraConfig) *Conn {
 	c := &Conn{
 		conn:        conn,
-		config:      fromConfig(config),
+		config:      config,
 		extraConfig: extraConfig,
 	}
 	c.handshakeFn = c.serverHandshake
@@ -46,10 +46,10 @@ func Server(conn net.Conn, config *Config, extraConfig *ExtraConfig) *Conn {
 // using conn as the underlying transport.
 // The config cannot be nil: users must set either ServerName or
 // InsecureSkipVerify in the config.
-func Client(conn net.Conn, config *Config, extraConfig *ExtraConfig) *Conn {
+func Client(conn net.Conn, config *config, extraConfig *ExtraConfig) *Conn {
 	c := &Conn{
 		conn:        conn,
-		config:      fromConfig(config),
+		config:      config,
 		extraConfig: extraConfig,
 		isClient:    true,
 	}
@@ -60,7 +60,7 @@ func Client(conn net.Conn, config *Config, extraConfig *ExtraConfig) *Conn {
 // A listener implements a network listener (net.Listener) for TLS connections.
 type listener struct {
 	net.Listener
-	config      *Config
+	config      *config
 	extraConfig *ExtraConfig
 }
 
@@ -78,7 +78,7 @@ func (l *listener) Accept() (net.Conn, error) {
 // Listener and wraps each connection with Server.
 // The configuration config must be non-nil and must include
 // at least one certificate or else set GetCertificate.
-func NewListener(inner net.Listener, config *Config, extraConfig *ExtraConfig) net.Listener {
+func NewListener(inner net.Listener, config *config, extraConfig *ExtraConfig) net.Listener {
 	l := new(listener)
 	l.Listener = inner
 	l.config = config
@@ -90,7 +90,7 @@ func NewListener(inner net.Listener, config *Config, extraConfig *ExtraConfig) n
 // given network address using net.Listen.
 // The configuration config must be non-nil and must include
 // at least one certificate or else set GetCertificate.
-func Listen(network, laddr string, config *Config, extraConfig *ExtraConfig) (net.Listener, error) {
+func Listen(network, laddr string, config *config, extraConfig *ExtraConfig) (net.Listener, error) {
 	if config == nil || len(config.Certificates) == 0 &&
 		config.GetCertificate == nil && config.GetConfigForClient == nil {
 		return nil, errors.New("tls: neither Certificates, GetCertificate, nor GetConfigForClient set in Config")
@@ -115,11 +115,11 @@ func (timeoutError) Temporary() bool { return true }
 //
 // DialWithDialer interprets a nil configuration as equivalent to the zero
 // configuration; see the documentation of Config for the defaults.
-func DialWithDialer(dialer *net.Dialer, network, addr string, config *Config, extraConfig *ExtraConfig) (*Conn, error) {
+func DialWithDialer(dialer *net.Dialer, network, addr string, config *config, extraConfig *ExtraConfig) (*Conn, error) {
 	return dial(context.Background(), dialer, network, addr, config, extraConfig)
 }
 
-func dial(ctx context.Context, netDialer *net.Dialer, network, addr string, config *Config, extraConfig *ExtraConfig) (*Conn, error) {
+func dial(ctx context.Context, netDialer *net.Dialer, network, addr string, config *config, extraConfig *ExtraConfig) (*Conn, error) {
 	// We want the Timeout and Deadline values from dialer to cover the
 	// whole process: TCP connection and TLS handshake. This means that we
 	// also need to start our own timers now.
@@ -205,7 +205,7 @@ func dial(ctx context.Context, netDialer *net.Dialer, network, addr string, conf
 // Dial interprets a nil configuration as equivalent to
 // the zero configuration; see the documentation of Config
 // for the defaults.
-func Dial(network, addr string, config *Config, extraConfig *ExtraConfig) (*Conn, error) {
+func Dial(network, addr string, config *config, extraConfig *ExtraConfig) (*Conn, error) {
 	return DialWithDialer(new(net.Dialer), network, addr, config, extraConfig)
 }
 
@@ -221,7 +221,7 @@ type Dialer struct {
 	// A nil configuration is equivalent to the zero
 	// configuration; see the documentation of Config for the
 	// defaults.
-	Config *Config
+	Config *config
 
 	ExtraConfig *ExtraConfig
 }

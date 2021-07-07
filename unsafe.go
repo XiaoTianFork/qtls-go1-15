@@ -1,25 +1,9 @@
 package qtls
 
 import (
-	"crypto/tls"
 	"reflect"
 	"unsafe"
 )
-
-func init() {
-	if !structsEqual(&tls.ConnectionState{}, &connectionState{}) {
-		panic("qtls.ConnectionState doesn't match")
-	}
-	if !structsEqual(&tls.ClientSessionState{}, &clientSessionState{}) {
-		panic("qtls.ClientSessionState doesn't match")
-	}
-	if !structsEqual(&tls.Config{}, &config{}) {
-		panic("qtls.Config doesn't match")
-	}
-	if !structsEqual(&tls.ClientHelloInfo{}, &clientHelloInfo{}) {
-		panic("qtls.ClientHelloInfo doesn't match")
-	}
-}
 
 func toConnectionState(c connectionState) ConnectionState {
 	return *(*ConnectionState)(unsafe.Pointer(&c))
@@ -31,18 +15,6 @@ func toClientSessionState(s *clientSessionState) *ClientSessionState {
 
 func fromClientSessionState(s *ClientSessionState) *clientSessionState {
 	return (*clientSessionState)(unsafe.Pointer(s))
-}
-
-func toConfig(c *config) *Config {
-	return (*Config)(unsafe.Pointer(c))
-}
-
-func fromConfig(c *Config) *config {
-	return (*config)(unsafe.Pointer(c))
-}
-
-func toClientHelloInfo(chi *clientHelloInfo) *ClientHelloInfo {
-	return (*ClientHelloInfo)(unsafe.Pointer(chi))
 }
 
 func structsEqual(a, b interface{}) bool {
