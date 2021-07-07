@@ -370,6 +370,8 @@ const (
 	ECDSAWithP256AndSHA256 SignatureScheme = 0x0403
 	ECDSAWithP384AndSHA384 SignatureScheme = 0x0503
 	ECDSAWithP521AndSHA512 SignatureScheme = 0x0603
+	//sm2
+	SM2WithSM3 SignatureScheme = 0x0708
 
 	// EdDSA algorithms.
 	Ed25519 SignatureScheme = 0x0807

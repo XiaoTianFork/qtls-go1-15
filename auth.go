@@ -13,6 +13,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"hash"
 	"io"
 )
@@ -209,6 +210,8 @@ func signatureSchemesForCertificate(version uint16, cert *Certificate) []Signatu
 		}
 	case ed25519.PublicKey:
 		sigAlgs = []SignatureScheme{Ed25519}
+	case *sm2.PublicKey:
+		sigAlgs = []SignatureScheme{SM2WithSM3}
 	default:
 		return nil
 	}

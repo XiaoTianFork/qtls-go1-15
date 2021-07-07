@@ -1317,7 +1317,7 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 	}{
 		{sm2Cert, &clientHelloInfo{
 			ServerName:        "",
-			SignatureSchemes:  []SignatureScheme{PSSWithSHA256},
+			SignatureSchemes:  []SignatureScheme{SM2WithSM3},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, ""},
 		{rsaCert, &clientHelloInfo{
