@@ -106,10 +106,15 @@ y2CCchQP2LJh2Hw=
 -----END CERTIFICATE-----
 `
 
-var sm2KeyPEM = testingKey(`
+var sm2KeyPEM = testingKey(`-----BEGIN EC PARAMETERS-----
+BggqgRzPVQGCLQ==
+-----END EC PARAMETERS-----
+-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIKd8IpFgNnD9lTIr1eE8dD72HNTkTA2cSBSdRo+LCuuToAoGCCqBHM9V
 AYItoUQDQgAED2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlq
-QMJnw6yPPOxWivHSrdH04YMShezq3lDyxg==`)
+QMJnw6yPPOxWivHSrdH04YMShezq3lDyxg==
+-----END EC PRIVATE KEY-----
+`)
 
 var keyPairTests = []struct {
 	algo string

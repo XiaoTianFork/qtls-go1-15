@@ -1210,6 +1210,7 @@ func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
 		}
 	}
 
+	//todo sfl 是否需要考虑sm2
 	// In TLS 1.3 we are done because supported_groups is only relevant to the
 	// ECDHE computation, point format negotiation is removed, cipher suites are
 	// only relevant to the AEAD choice, and static RSA does not exist.
