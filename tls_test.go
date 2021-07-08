@@ -89,32 +89,6 @@ kohxS/xfFg/TEwRSSws+roJr4JFKpO2t3/be5OdqmQ==
 -----END EC TESTING KEY-----
 `)
 
-var sm2CertPEM = `-----BEGIN CERTIFICATE-----
-MIICRzCCAe2gAwIBAgIQILmubp7njmhGt3wZLFwx5zAKBggqgRzPVQGDdTBzMQsw
-CQYDVQQGEwJDTjELMAkGA1UECAwCSFoxDDAKBgNVBAoMA2FsaTEMMAoGA1UECwwD
-YW50MRgwFgYDVQQDDA93d3cuZXhhbXBsZS5jb20xITAfBgkqhkiG9w0BCQEWEmNs
-aWVudEBleGFtcGxlLmNvbTAeFw0yMDA0MTQwODAyNTJaFw0zMDA0MTIwODAyNTJa
-MHMxCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJIWjEMMAoGA1UECgwDYWxpMQwwCgYD
-VQQLDANhbnQxGDAWBgNVBAMMD3d3dy5leGFtcGxlLmNvbTEhMB8GCSqGSIb3DQEJ
-ARYSY2xpZW50QGV4YW1wbGUuY29tMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAE
-D2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlqQMJnw6yPPOxW
-ivHSrdH04YMShezq3lDyxqNjMGEwHQYDVR0OBBYEFHwhHQcZorHZdhywlUFAa7w2
-dhtuMB8GA1UdIwQYMBaAFHwhHQcZorHZdhywlUFAa7w2dhtuMA8GA1UdEwEB/wQF
-MAMBAf8wDgYDVR0PAQH/BAQDAgGGMAoGCCqBHM9VAYN1A0gAMEUCIQCeqtmZYECI
-qKkHrwvJTwZrwA6+3kDRtP05UkKM+IYstwIgX1ibBxA96y1oR52gzuygkSBfdJH6
-y2CCchQP2LJh2Hw=
------END CERTIFICATE-----
-`
-
-var sm2KeyPEM = testingKey(`-----BEGIN EC PARAMETERS-----
-BggqgRzPVQGCLQ==
------END EC PARAMETERS-----
------BEGIN EC PRIVATE KEY-----
-MHcCAQEEIKd8IpFgNnD9lTIr1eE8dD72HNTkTA2cSBSdRo+LCuuToAoGCCqBHM9V
-AYItoUQDQgAED2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlq
-QMJnw6yPPOxWivHSrdH04YMShezq3lDyxg==
------END EC PRIVATE KEY-----
-`)
 
 var keyPairTests = []struct {
 	algo string
@@ -122,7 +96,7 @@ var keyPairTests = []struct {
 	key  string
 }{
 	{"ECDSA", ecdsaCertPEM, ecdsaKeyPEM},
-	{"SM2", sm2CertPEM, sm2KeyPEM},
+	{"SM2", sm2LeafCert, sm2LeafKey},
 	{"RSA", rsaCertPEM, rsaKeyPEM},
 	{"RSA-untyped", rsaCertPEM, keyPEM}, // golang.org/issue/4477
 }
@@ -1311,8 +1285,8 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 	}
 
 	sm2Cert := &Certificate{
-		Certificate: [][]byte{sm2Certificate},
-		PrivateKey:  sm2PrivateKey,
+		Certificate: [][]byte{sm2LeafCertByte},
+		PrivateKey:  sm2LeafPrivateKeyByte,
 	}
 
 	tests := []struct {
@@ -1321,7 +1295,7 @@ func TestClientHelloInfo_SupportsCertificate(t *testing.T) {
 		wantErr string
 	}{
 		{sm2Cert, &clientHelloInfo{
-			ServerName:        "",
+			ServerName:        "www.alipay.com",
 			SignatureSchemes:  []SignatureScheme{SM2WithSM3},
 			SupportedVersions: []uint16{VersionTLS13},
 		}, ""},
