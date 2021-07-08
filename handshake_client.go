@@ -13,6 +13,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"io"
 	"net"
 	"strings"
@@ -952,7 +953,7 @@ func (c *Conn) verifyServerCertificate(certificates [][]byte) error {
 	}
 
 	switch certs[0].PublicKey.(type) {
-	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey, *sm2.PublicKey:
 		break
 	default:
 		c.sendAlert(alertUnsupportedCertificate)

@@ -726,6 +726,15 @@ func TestHandshakeClientECDSATLS13(t *testing.T) {
 	runClientTestTLS13(t, test)
 }
 
+func TestHandshakeClientSM2TLS13(t *testing.T) {
+	test := &clientTest{
+		name: "Sm2",
+		cert: sm2LeafCertByte,
+		key:  sm2LeafPrivateKeyByte,
+	}
+	runClientTestTLS13(t, test)
+}
+
 func TestHandshakeClientEd25519(t *testing.T) {
 	test := &clientTest{
 		name: "Ed25519",

@@ -55,6 +55,14 @@ func verifyHandshakeSignature(sigType uint8, pubkey crypto.PublicKey, hashFunc c
 		if err := rsa.VerifyPSS(pubKey, hashFunc, signed, sig, signOpts); err != nil {
 			return err
 		}
+	case signatureSM2:
+		pubKey, ok := pubkey.(*sm2.PublicKey)
+		if !ok {
+			return errors.New("tls: SM2 signing requires a SM2 public key")
+		}
+		if ok := pubKey.Verify(signed, sig); !ok {
+			return errors.New("verify sm2 signature error")
+		}
 	default:
 		return errors.New("internal error: unknown signature type")
 	}
@@ -106,6 +114,8 @@ func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType
 		sigType = signatureECDSA
 	case Ed25519:
 		sigType = signatureEd25519
+	case SM2WithSM3:
+		sigType = signatureSM2
 	default:
 		return 0, 0, fmt.Errorf("unsupported signature algorithm: %v", signatureAlgorithm)
 	}
@@ -120,6 +130,9 @@ func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType
 		hash = crypto.SHA512
 	case Ed25519:
 		hash = directSigning
+	case SM2WithSM3:
+		//crypto.BLAKE2b_256 is same sm3
+		hash = crypto.BLAKE2b_256
 	default:
 		return 0, 0, fmt.Errorf("unsupported signature algorithm: %v", signatureAlgorithm)
 	}
@@ -141,6 +154,8 @@ func legacyTypeAndHashFromPublicKey(pub crypto.PublicKey) (sigType uint8, hash c
 		// full signature, and not even OpenSSL bothers with the
 		// complexity, so we can't even test it properly.
 		return 0, 0, fmt.Errorf("tls: Ed25519 public keys are not supported before TLS 1.2")
+	case *sm2.PublicKey:
+		return signatureSM2, crypto.BLAKE2b_256, nil
 	default:
 		return 0, 0, fmt.Errorf("tls: unsupported public key: %T", pub)
 	}

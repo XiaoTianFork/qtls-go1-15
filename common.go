@@ -175,6 +175,7 @@ const (
 	signatureRSAPSS
 	signatureECDSA
 	signatureEd25519
+	signatureSM2
 )
 
 // directSigning is a standard Hash value that signals that no pre-hashing
@@ -197,6 +198,7 @@ var supportedSignatureAlgorithms = []SignatureScheme{
 	PKCS1WithSHA512,
 	ECDSAWithP384AndSHA384,
 	ECDSAWithP521AndSHA512,
+	SM2WithSM3,
 	PKCS1WithSHA1,
 	ECDSAWithSHA1,
 }

@@ -1,9 +1,10 @@
 package qtls
 
 import (
+	"encoding/asn1"
 	"encoding/base64"
 	"github.com/xiaotianfork/qtls-go1-15/sm2"
-	"math/big"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 )
 
 const sm2RootCert = `
@@ -59,6 +60,9 @@ qKkHrwvJTwZrwA6+3kDRtP05UkKM+IYstwIgX1ibBxA96y1oR52gzuygkSBfdJH6
 y2CCchQP2LJh2Hw=
 -----END CERTIFICATE-----
 `
+
+var sm2RootCertByte = base64ToByte("MIICRzCCAe2gAwIBAgIQILmubp7njmhGt3wZLFwx5zAKBggqgRzPVQGDdTBzMQsw\nCQYDVQQGEwJDTjELMAkGA1UECAwCSFoxDDAKBgNVBAoMA2FsaTEMMAoGA1UECwwD\nYW50MRgwFgYDVQQDDA93d3cuZXhhbXBsZS5jb20xITAfBgkqhkiG9w0BCQEWEmNs\naWVudEBleGFtcGxlLmNvbTAeFw0yMDA0MTQwODAyNTJaFw0zMDA0MTIwODAyNTJa\nMHMxCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJIWjEMMAoGA1UECgwDYWxpMQwwCgYD\nVQQLDANhbnQxGDAWBgNVBAMMD3d3dy5leGFtcGxlLmNvbTEhMB8GCSqGSIb3DQEJ\nARYSY2xpZW50QGV4YW1wbGUuY29tMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAE\nD2mc0ctYS8z6WNXNsqUGPutEkCwAOXMGXiYUpZMjMuqX3QE27wlqQMJnw6yPPOxW\nivHSrdH04YMShezq3lDyxqNjMGEwHQYDVR0OBBYEFHwhHQcZorHZdhywlUFAa7w2\ndhtuMB8GA1UdIwQYMBaAFHwhHQcZorHZdhywlUFAa7w2dhtuMA8GA1UdEwEB/wQF\nMAMBAf8wDgYDVR0PAQH/BAQDAgGGMAoGCCqBHM9VAYN1A0gAMEUCIQCeqtmZYECI\nqKkHrwvJTwZrwA6+3kDRtP05UkKM+IYstwIgX1ibBxA96y1oR52gzuygkSBfdJH6\ny2CCchQP2LJh2Hw=")
+
 const sm2RootKey = `-----BEGIN EC PARAMETERS-----
 BggqgRzPVQGCLQ==
 -----END EC PARAMETERS-----
@@ -120,7 +124,10 @@ p7lh2loc/8aDAs65Xz49EQSYr4UoAiB4u99d4sciGppB7gfwPzts774gzSSuBjpX
 apT8msITgw==
 -----END CERTIFICATE-----
 `
-const sm2intermediateKey = `-----BEGIN EC PARAMETERS-----
+
+var sm2IntermediateCertByte = base64ToByte("MIICQzCCAeqgAwIBAgIQILmubp7njmhGt3wZLFwx6DAKBggqgRzPVQGDdTBzMQsw\nCQYDVQQGEwJDTjELMAkGA1UECAwCSFoxDDAKBgNVBAoMA2FsaTEMMAoGA1UECwwD\nYW50MRgwFgYDVQQDDA93d3cuZXhhbXBsZS5jb20xITAfBgkqhkiG9w0BCQEWEmNs\naWVudEBleGFtcGxlLmNvbTAeFw0yMDA0MTQwODExMDFaFw0zMDA0MTIwODExMDFa\nMG0xCzAJBgNVBAYTAkNOMQswCQYDVQQIDAJIWjEMMAoGA1UECgwDYWxpMQwwCgYD\nVQQLDANhbnQxFzAVBgNVBAMMDnd3dy5taWRkbGUuY29tMRwwGgYJKoZIhvcNAQkB\nFg10ZXN0QHRlc3QuY29tMFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAEtxG+DiyN\nN9cJzNj5TLdw11p9QeFuqkSY4ak1IIj1WKZOOCNIitgPJqcX8XB006rkWdFWjlXR\nX7zcaOrc+mxZE6NmMGQwHQYDVR0OBBYEFHFQaFdzKiLW5tKSCzoJxVZYAGFeMB8G\nA1UdIwQYMBaAFHwhHQcZorHZdhywlUFAa7w2dhtuMBIGA1UdEwEB/wQIMAYBAf8C\nAQAwDgYDVR0PAQH/BAQDAgGGMAoGCCqBHM9VAYN1A0cAMEQCIG4u6DcPtkPooX2z\np7lh2loc/8aDAs65Xz49EQSYr4UoAiB4u99d4sciGppB7gfwPzts774gzSSuBjpX\napT8msITgw==")
+
+const sm2IntermediateKey = `-----BEGIN EC PARAMETERS-----
 BggqgRzPVQGCLQ==
 -----END EC PARAMETERS-----
 -----BEGIN EC PRIVATE KEY-----
@@ -129,6 +136,9 @@ AYItoUQDQgAEtxG+DiyNN9cJzNj5TLdw11p9QeFuqkSY4ak1IIj1WKZOOCNIitgP
 JqcX8XB006rkWdFWjlXRX7zcaOrc+mxZEw==
 -----END EC PRIVATE KEY-----
 `
+
+var sm2IntermediatePrivateKeyByte = ParseSm2PrivateKey("MHcCAQEEIFB3gBTaAJYNNKkY4zDMxmgPCJuSt3G2WDO2x0I8nXzVoAoGCCqBHM9V\nAYItoUQDQgAEtxG+DiyNN9cJzNj5TLdw11p9QeFuqkSY4ak1IIj1WKZOOCNIitgP\nJqcX8XB006rkWdFWjlXRX7zcaOrc+mxZEw==")
+
 const sm2LeafCert = `Certificate:
     Data:
         Version: 3 (0x2)
@@ -215,15 +225,20 @@ func base64ToByte(cert string) []byte {
 	return bytes
 }
 
-func sm2PrivateKey1(privateKeyString string) *sm2.PrivateKey {
-	daBuf := base64ToByte(privateKeyString)
-	curve := sm2.P256Sm2()
-	curve.ScalarBaseMult(daBuf)
-	da := new(sm2.PrivateKey)
-	da.PublicKey.Curve = curve
-	da.D = new(big.Int).SetBytes(daBuf)
-	da.PublicKey.X, da.PublicKey.Y = curve.ScalarBaseMult(daBuf)
-	return da
+type sm2PrivateKey struct {
+	Version       int
+	PrivateKey    []byte
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
 }
 
-var sm2LeafPrivateKeyByte = sm2PrivateKey1("MHcCAQEEIJ0I4yR5ezlVWygUi7+NNipNJSBqUjaCopitIJMU1nlSoAoGCCqBHM9V\nAYItoUQDQgAEMbiGjBxkDrC1rwuVlIC/6fbGdnaKxj2/Lkv9EcOLKv3WFuFi1eae\nUvQSkNcRMdaAixpM+RKQ+Cp6Z3szJUr0jQ==")
+func ParseSm2PrivateKey(privateKeyString string) *sm2.PrivateKey {
+	daBuf := base64ToByte(privateKeyString)
+	key, err := x509.ParseSm2PrivateKey(daBuf)
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+var sm2LeafPrivateKeyByte = ParseSm2PrivateKey("MHcCAQEEIJ0I4yR5ezlVWygUi7+NNipNJSBqUjaCopitIJMU1nlSoAoGCCqBHM9V\nAYItoUQDQgAEMbiGjBxkDrC1rwuVlIC/6fbGdnaKxj2/Lkv9EcOLKv3WFuFi1eae\nUvQSkNcRMdaAixpM+RKQ+Cp6Z3szJUr0jQ==")

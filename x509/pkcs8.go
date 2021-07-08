@@ -12,6 +12,8 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/sm2"
+	"math/big"
 )
 
 // pkcs8 reflects an ASN.1, PKCS #8 PrivateKey. See
@@ -127,10 +129,56 @@ func MarshalPKCS8PrivateKey(key interface{}) ([]byte, error) {
 			return nil, fmt.Errorf("x509: failed to marshal private key: %v", err)
 		}
 		privKey.PrivateKey = curvePrivateKey
-
+	case *sm2.PrivateKey:
+		privKey.Algo.Algorithm = oidPublicKeyECDSA
+		namedCurveOID, ok := oidFromNamedCurve(k.Curve)
+		if !ok {
+			return nil, errors.New("go-pkcs12: unknown elliptic curve")
+		}
+		var err error
+		if privKey.Algo.Parameters.FullBytes, err = asn1.Marshal(namedCurveOID); err != nil {
+			return nil, errors.New("go-pkcs12: failed to embed OID of named curve in PKCS#8: " + err.Error())
+		}
+		if privKey.PrivateKey, err = MarshalSm2PrivateKey(k); err != nil {
+			return nil, errors.New("go-pkcs12: failed to embed EC private key in PKCS#8: " + err.Error())
+		}
 	default:
 		return nil, fmt.Errorf("x509: unknown key type while marshaling PKCS#8: %T", key)
 	}
 
 	return asn1.Marshal(privKey)
+}
+
+type sm2PrivateKey struct {
+	Version       int
+	PrivateKey    []byte
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
+}
+
+func ParseSm2PrivateKey(privateKeyByte []byte) (*sm2.PrivateKey, error) {
+	var privateKey sm2PrivateKey
+
+	if _, err := asn1.Unmarshal(privateKeyByte, &privateKey); err != nil {
+		return nil, errors.New("x509: failed to parse SM2 private key: " + err.Error())
+	}
+	curve := sm2.P256Sm2()
+	k := new(big.Int).SetBytes(privateKey.PrivateKey)
+	curveOrder := curve.Params().N
+	if k.Cmp(curveOrder) >= 0 {
+		return nil, errors.New("x509: invalid elliptic curve private key value")
+	}
+	priv := new(sm2.PrivateKey)
+	priv.Curve = curve
+	priv.D = k
+	privateKeyBytes := make([]byte, (curveOrder.BitLen()+7)/8)
+	for len(privateKey.PrivateKey) > len(privateKeyBytes) {
+		if privateKey.PrivateKey[0] != 0 {
+			return nil, errors.New("x509: invalid private key length")
+		}
+		privateKey.PrivateKey = privateKey.PrivateKey[1:]
+	}
+	copy(privateKeyBytes[len(privateKeyBytes)-len(privateKey.PrivateKey):], privateKey.PrivateKey)
+	priv.X, priv.Y = curve.ScalarBaseMult(privateKeyBytes)
+	return priv, nil
 }

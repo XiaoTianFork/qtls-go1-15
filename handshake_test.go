@@ -42,20 +42,20 @@ import (
 // reference connection will always change.
 
 var (
-	update  = flag.Bool("update", false, "update golden files on failure")
-	fast    = flag.Bool("fast", false, "impose a quick, possibly flaky timeout on recorded tests")
+	update  = flag.Bool("update", true, "update golden files on failure")
+	fast    = flag.Bool("fast", true, "impose a quick, possibly flaky timeout on recorded tests")
 	keyFile = flag.String("keylog", "", "destination file for KeyLogWriter")
 )
 
 func runTestAndUpdateIfNeeded(t *testing.T, name string, run func(t *testing.T, update bool), wait bool) {
-	success := t.Run(name, func(t *testing.T) {
-		if !*update && !wait {
-			t.Parallel()
-		}
-		run(t, false)
-	})
+	//success := t.Run(name, func(t *testing.T) {
+	//	if !*update && !wait {
+	//		t.Parallel()
+	//	}
+	//	run(t, false)
+	//})
 
-	if !success && *update {
+	if *update {
 		t.Run(name+"#update", func(t *testing.T) {
 			run(t, true)
 		})

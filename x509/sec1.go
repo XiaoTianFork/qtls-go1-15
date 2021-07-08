@@ -10,6 +10,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"math/big"
 )
 
@@ -47,6 +48,26 @@ func MarshalECPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
 	}
 
 	return marshalECPrivateKeyWithOID(key, oid)
+}
+
+func MarshalSm2PrivateKey(key *sm2.PrivateKey) ([]byte, error) {
+	oid, ok := oidFromNamedCurve(key.Curve)
+	if !ok {
+		return nil, errors.New("x509: unknown elliptic curve")
+	}
+	return MarshalPrivateKey(key, oid)
+}
+
+func MarshalPrivateKey(key *sm2.PrivateKey, oid asn1.ObjectIdentifier) ([]byte, error) {
+	privateKeyBytes := key.D.Bytes()
+	paddedPrivateKey := make([]byte, (key.Curve.Params().N.BitLen()+7)/8)
+	copy(paddedPrivateKey[len(paddedPrivateKey)-len(privateKeyBytes):], privateKeyBytes)
+	return asn1.Marshal(ecPrivateKey{
+		Version:       1,
+		PrivateKey:    paddedPrivateKey,
+		NamedCurveOID: oid,
+		PublicKey:     asn1.BitString{Bytes: elliptic.Marshal(key.Curve, key.X, key.Y)},
+	})
 }
 
 // marshalECPrivateKey marshals an EC private key into ASN.1, DER format and

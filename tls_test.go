@@ -89,7 +89,6 @@ kohxS/xfFg/TEwRSSws+roJr4JFKpO2t3/be5OdqmQ==
 -----END EC TESTING KEY-----
 `)
 
-
 var keyPairTests = []struct {
 	algo string
 	cert string
@@ -1125,21 +1124,21 @@ func TestConnectionStateMarshal(t *testing.T) {
 }
 
 func TestConnectionState(t *testing.T) {
-	issuer, err := x509.ParseCertificate(testRSACertificateIssuer)
+	rootCAs := x509.NewCertPool()
+	issuer, err := x509.ParseCertificate(sm2IntermediateCertByte)
 	if err != nil {
 		panic(err)
 	}
-	rootCAs := x509.NewCertPool()
 	rootCAs.AddCert(issuer)
 
-	now := func() time.Time { return time.Unix(1476984729, 0) }
+	now := func() time.Time { return time.Now() }
 
 	const alpnProtocol = "golang"
-	const serverName = "example.golang"
+	const serverName = "alipay.com"
 	var scts = [][]byte{[]byte("dummy sct 1"), []byte("dummy sct 2")}
 	var ocsp = []byte("dummy ocsp")
 
-	for _, v := range []uint16{VersionTLS12, VersionTLS13} {
+	for _, v := range []uint16{VersionTLS13} {
 		var name string
 		switch v {
 		case VersionTLS12:
@@ -1148,7 +1147,7 @@ func TestConnectionState(t *testing.T) {
 			name = "TLSv13"
 		}
 		t.Run(name, func(t *testing.T) {
-			config := &config{
+			clientConfig := &config{
 				Time:         now,
 				Rand:         zeroSource{},
 				Certificates: make([]Certificate, 1),
@@ -1159,12 +1158,28 @@ func TestConnectionState(t *testing.T) {
 				NextProtos:   []string{alpnProtocol},
 				ServerName:   serverName,
 			}
-			config.Certificates[0].Certificate = [][]byte{testRSACertificate}
-			config.Certificates[0].PrivateKey = testRSAPrivateKey
-			config.Certificates[0].SignedCertificateTimestamps = scts
-			config.Certificates[0].OCSPStaple = ocsp
+			clientConfig.Certificates[0].Certificate = [][]byte{sm2LeafCertByte}
+			clientConfig.Certificates[0].PrivateKey = sm2LeafPrivateKeyByte
+			clientConfig.Certificates[0].SignedCertificateTimestamps = scts
+			clientConfig.Certificates[0].OCSPStaple = ocsp
 
-			ss, cs, err := testHandshake(t, config, config)
+			serverConfig := &config{
+				Time:         now,
+				Rand:         zeroSource{},
+				Certificates: make([]Certificate, 1),
+				MaxVersion:   v,
+				RootCAs:      rootCAs,
+				ClientCAs:    rootCAs,
+				ClientAuth:   RequireAndVerifyClientCert,
+				NextProtos:   []string{alpnProtocol},
+				ServerName:   "",
+			}
+			serverConfig.Certificates[0].Certificate = [][]byte{sm2LeafCertByte}
+			serverConfig.Certificates[0].PrivateKey = sm2LeafPrivateKeyByte
+			serverConfig.Certificates[0].SignedCertificateTimestamps = scts
+			serverConfig.Certificates[0].OCSPStaple = ocsp
+
+			ss, cs, err := testHandshake(t, clientConfig, serverConfig)
 			if err != nil {
 				t.Fatalf("Handshake failed: %v", err)
 			}
