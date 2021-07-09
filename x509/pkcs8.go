@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"math/big"
+	"reflect"
 )
 
 // pkcs8 reflects an ASN.1, PKCS #8 PrivateKey. See
@@ -181,4 +182,16 @@ func ParseSm2PrivateKey(privateKeyByte []byte) (*sm2.PrivateKey, error) {
 	copy(privateKeyBytes[len(privateKeyBytes)-len(privateKey.PrivateKey):], privateKey.PrivateKey)
 	priv.X, priv.Y = curve.ScalarBaseMult(privateKeyBytes)
 	return priv, nil
+}
+
+func ParsePKCS8UnecryptedPrivateKey(der []byte) (*sm2.PrivateKey, error) {
+	var privKey pkcs8
+
+	if _, err := asn1.Unmarshal(der, &privKey); err != nil {
+		return nil, err
+	}
+	if !reflect.DeepEqual(privKey.Algo.Algorithm, oidSignatureSM2WithSM3) {
+		return nil, errors.New("x509: not sm2 elliptic curve")
+	}
+	return ParseSm2PrivateKey(privKey.PrivateKey)
 }

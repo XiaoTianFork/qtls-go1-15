@@ -14,13 +14,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/xiaotianfork/qtls-go1-15/sm2"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"hash"
 	"io"
 )
 
 // verifyHandshakeSignature verifies a signature against pre-hashed
 // (if required) handshake contents.
-func verifyHandshakeSignature(sigType uint8, pubkey crypto.PublicKey, hashFunc crypto.Hash, signed, sig []byte) error {
+func verifyHandshakeSignature(sigType uint8, pubkey crypto.PublicKey, hashFunc x509.Hash, signed, sig []byte) error {
 	switch sigType {
 	case signatureECDSA:
 		pubKey, ok := pubkey.(*ecdsa.PublicKey)
@@ -43,7 +44,7 @@ func verifyHandshakeSignature(sigType uint8, pubkey crypto.PublicKey, hashFunc c
 		if !ok {
 			return fmt.Errorf("expected an RSA public key, got %T", pubkey)
 		}
-		if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, signed, sig); err != nil {
+		if err := rsa.VerifyPKCS1v15(pubKey, toCryptoHash(hashFunc), signed, sig); err != nil {
 			return err
 		}
 	case signatureRSAPSS:
@@ -52,7 +53,7 @@ func verifyHandshakeSignature(sigType uint8, pubkey crypto.PublicKey, hashFunc c
 			return fmt.Errorf("expected an RSA public key, got %T", pubkey)
 		}
 		signOpts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
-		if err := rsa.VerifyPSS(pubKey, hashFunc, signed, sig, signOpts); err != nil {
+		if err := rsa.VerifyPSS(pubKey, toCryptoHash(hashFunc), signed, sig, signOpts); err != nil {
 			return err
 		}
 	case signatureSM2:
@@ -87,7 +88,7 @@ var signaturePadding = []byte{
 
 // signedMessage returns the pre-hashed (if necessary) message to be signed by
 // certificate keys in TLS 1.3. See RFC 8446, Section 4.4.3.
-func signedMessage(sigHash crypto.Hash, context string, transcript hash.Hash) []byte {
+func signedMessage(sigHash x509.Hash, context string, transcript hash.Hash) []byte {
 	if sigHash == directSigning {
 		b := &bytes.Buffer{}
 		b.Write(signaturePadding)
@@ -104,7 +105,7 @@ func signedMessage(sigHash crypto.Hash, context string, transcript hash.Hash) []
 
 // typeAndHashFromSignatureScheme returns the corresponding signature type and
 // crypto.Hash for a given TLS SignatureScheme.
-func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType uint8, hash crypto.Hash, err error) {
+func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType uint8, hash x509.Hash, err error) {
 	switch signatureAlgorithm {
 	case PKCS1WithSHA1, PKCS1WithSHA256, PKCS1WithSHA384, PKCS1WithSHA512:
 		sigType = signaturePKCS1v15
@@ -121,18 +122,18 @@ func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType
 	}
 	switch signatureAlgorithm {
 	case PKCS1WithSHA1, ECDSAWithSHA1:
-		hash = crypto.SHA1
+		hash = x509.SHA1
 	case PKCS1WithSHA256, PSSWithSHA256, ECDSAWithP256AndSHA256:
-		hash = crypto.SHA256
+		hash = x509.SHA256
 	case PKCS1WithSHA384, PSSWithSHA384, ECDSAWithP384AndSHA384:
-		hash = crypto.SHA384
+		hash = x509.SHA384
 	case PKCS1WithSHA512, PSSWithSHA512, ECDSAWithP521AndSHA512:
-		hash = crypto.SHA512
+		hash = x509.SHA512
 	case Ed25519:
 		hash = directSigning
 	case SM2WithSM3:
 		//crypto.BLAKE2b_256 is same sm3
-		hash = crypto.BLAKE2b_256
+		hash = x509.SM3
 	default:
 		return 0, 0, fmt.Errorf("unsupported signature algorithm: %v", signatureAlgorithm)
 	}
@@ -142,12 +143,12 @@ func typeAndHashFromSignatureScheme(signatureAlgorithm SignatureScheme) (sigType
 // legacyTypeAndHashFromPublicKey returns the fixed signature type and crypto.Hash for
 // a given public key used with TLS 1.0 and 1.1, before the introduction of
 // signature algorithm negotiation.
-func legacyTypeAndHashFromPublicKey(pub crypto.PublicKey) (sigType uint8, hash crypto.Hash, err error) {
+func legacyTypeAndHashFromPublicKey(pub crypto.PublicKey) (sigType uint8, hash x509.Hash, err error) {
 	switch pub.(type) {
 	case *rsa.PublicKey:
-		return signaturePKCS1v15, crypto.MD5SHA1, nil
+		return signaturePKCS1v15, x509.MD5SHA1, nil
 	case *ecdsa.PublicKey:
-		return signatureECDSA, crypto.SHA1, nil
+		return signatureECDSA, x509.SHA1, nil
 	case ed25519.PublicKey:
 		// RFC 8422 specifies support for Ed25519 in TLS 1.0 and 1.1,
 		// but it requires holding on to a handshake transcript to do a
@@ -155,7 +156,7 @@ func legacyTypeAndHashFromPublicKey(pub crypto.PublicKey) (sigType uint8, hash c
 		// complexity, so we can't even test it properly.
 		return 0, 0, fmt.Errorf("tls: Ed25519 public keys are not supported before TLS 1.2")
 	case *sm2.PublicKey:
-		return signatureSM2, crypto.BLAKE2b_256, nil
+		return signatureSM2, x509.SM3, nil
 	default:
 		return 0, 0, fmt.Errorf("tls: unsupported public key: %T", pub)
 	}

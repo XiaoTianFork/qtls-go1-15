@@ -694,7 +694,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		}
 
 		var sigType uint8
-		var sigHash crypto.Hash
+		var sigHash x509.Hash
 		if c.vers >= VersionTLS12 {
 			signatureAlgorithm, err := selectSignatureScheme(c.vers, chainToSend, certReq.supportedSignatureAlgorithms)
 			if err != nil {
@@ -718,7 +718,7 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		signed := hs.finishedHash.hashForClientCertificate(sigType, sigHash, hs.masterSecret)
 		signOpts := crypto.SignerOpts(sigHash)
 		if sigType == signatureRSAPSS {
-			signOpts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: sigHash}
+			signOpts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: toCryptoHash(sigHash)}
 		}
 		certVerify.signature, err = key.Sign(c.config.rand(), signed, signOpts)
 		if err != nil {

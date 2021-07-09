@@ -326,12 +326,6 @@ var (
 
 	//sm2
 	oidSignatureSM2WithSM3    = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
-	oidSignatureSM2WithSHA1   = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 502}
-	oidSignatureSM2WithSHA256 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 503}
-	oidSignatureSM3WithRSA    = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 504}
-	//sm3
-	oidSM3     = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 401, 1}
-	oidHashSM3 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 401}
 
 	// oidISOSignatureSHA1WithRSA means the same as oidSignatureSHA1WithRSA
 	// but it's specified by ISO. Microsoft's makecert.exe has been known
@@ -364,8 +358,6 @@ var signatureAlgorithmDetails = []struct {
 	{ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, ECDSA, SHA512},
 	{PureEd25519, "Ed25519", oidSignatureEd25519, Ed25519, Hash(0) /* no pre-hashing */},
 	{SM2WithSM3, "SM2-SM3", oidSignatureSM2WithSM3, ECDSA, SM3},
-	{SM2WithSHA1, "SM2-SHA1", oidSignatureSM2WithSHA1, ECDSA, SHA1},
-	{SM2WithSHA256, "SM2-SHA256", oidSignatureSM2WithSHA256, ECDSA, SHA256},
 }
 
 // pssParameters reflects the parameters in an AlgorithmIdentifier that
@@ -953,7 +945,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
 			return errors.New("x509: ECDSA signature contained zero or negative values")
 		}
-		if !pub.Verify(signed, signature) {
+		if !sm2.Sm2Verify(pub, signed, nil, ecdsaSig.R, ecdsaSig.S) {
 			return errors.New("x509: SM2 verification failure")
 		}
 	}
@@ -2036,11 +2028,9 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 		default:
 			err = errors.New("x509: unknown elliptic curve")
 		}
-
 	case ed25519.PublicKey:
 		pubType = Ed25519
 		sigAlgo.Algorithm = oidSignatureEd25519
-
 	default:
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}

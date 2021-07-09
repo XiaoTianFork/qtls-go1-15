@@ -16,15 +16,9 @@ limitations under the License.
 package sm3
 
 import (
-	"crypto"
 	"encoding/binary"
 	"hash"
 )
-
-//init use sm3 replace crypto.BLAKE2b_256
-func init() {
-	crypto.RegisterHash(crypto.BLAKE2b_256, New)
-}
 
 type SM3 struct {
 	digest      [8]uint32 // digest represents the partial evaluation of V

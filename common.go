@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"io"
 	"net"
 	"strings"
@@ -129,6 +130,7 @@ const (
 	CurveP256 CurveID = 23
 	CurveP384 CurveID = 24
 	CurveP521 CurveID = 25
+	CurveSM2  CurveID = 26
 	X25519    CurveID = 29
 )
 
@@ -181,7 +183,7 @@ const (
 // directSigning is a standard Hash value that signals that no pre-hashing
 // should be performed, and that the input should be signed directly. It is the
 // hash function associated with the Ed25519 signature scheme.
-var directSigning crypto.Hash = 0
+var directSigning x509.Hash = 0
 
 // supportedSignatureAlgorithms contains the signature and hash algorithms that
 // the code advertises as supported in a TLS 1.2+ ClientHello and in a TLS 1.2+
@@ -1050,7 +1052,7 @@ func supportedVersionsFromMax(maxVersion uint16) []uint16 {
 	return versions
 }
 
-var defaultCurvePreferences = []CurveID{X25519, CurveP256, CurveP384, CurveP521}
+var defaultCurvePreferences = []CurveID{CurveSM2, X25519, CurveP256, CurveP384, CurveP521}
 
 func (c *config) curvePreferences() []CurveID {
 	if c == nil || len(c.CurvePreferences) == 0 {
@@ -1237,6 +1239,8 @@ func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
 				curve = CurveP384
 			case elliptic.P521():
 				curve = CurveP521
+			case sm2.P256Sm2():
+				curve = CurveSM2
 			default:
 				return supportsRSAFallback(unsupportedCertificateError(c))
 			}
@@ -1539,10 +1543,10 @@ func initDefaultCipherSuites() {
 			TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 		}
 		varDefaultCipherSuitesTLS13 = []uint16{
+			TLS_SM4_GCM_SM3,
 			TLS_AES_128_GCM_SHA256,
 			TLS_CHACHA20_POLY1305_SHA256,
 			TLS_AES_256_GCM_SHA384,
-			TLS_SM4_GCM_SM3,
 			TLS_SM4_CCM_SM3,
 		}
 	} else {
@@ -1557,10 +1561,10 @@ func initDefaultCipherSuites() {
 			TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		}
 		varDefaultCipherSuitesTLS13 = []uint16{
+			TLS_SM4_GCM_SM3,
 			TLS_CHACHA20_POLY1305_SHA256,
 			TLS_AES_128_GCM_SHA256,
 			TLS_AES_256_GCM_SHA384,
-			TLS_SM4_GCM_SM3,
 			TLS_SM4_CCM_SM3,
 		}
 	}

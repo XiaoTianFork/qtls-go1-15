@@ -106,7 +106,7 @@ func md5SHA1Hash(slices [][]byte) []byte {
 // using the given hash function (for >= TLS 1.2) or using a default based on
 // the sigType (for earlier TLS versions). For Ed25519 signatures, which don't
 // do pre-hashing, it returns the concatenation of the slices.
-func hashForServerKeyExchange(sigType uint8, hashFunc crypto.Hash, version uint16, slices ...[]byte) []byte {
+func hashForServerKeyExchange(sigType uint8, hashFunc x509.Hash, version uint16, slices ...[]byte) []byte {
 	if sigType == signatureEd25519 {
 		var signed []byte
 		for _, slice := range slices {
@@ -121,9 +121,6 @@ func hashForServerKeyExchange(sigType uint8, hashFunc crypto.Hash, version uint1
 		}
 		digest := h.Sum(nil)
 		return digest
-	}
-	if sigType == signatureECDSA {
-		return sha1Hash(slices)
 	}
 	if sigType == signatureECDSA {
 		return sha1Hash(slices)
@@ -184,7 +181,7 @@ func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *config, cert *Cer
 
 	var signatureAlgorithm SignatureScheme
 	var sigType uint8
-	var sigHash crypto.Hash
+	var sigHash x509.Hash
 	if ka.version >= VersionTLS12 {
 		signatureAlgorithm, err = selectSignatureScheme(ka.version, cert, clientHello.supportedSignatureAlgorithms)
 		if err != nil {
@@ -208,7 +205,7 @@ func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *config, cert *Cer
 
 	signOpts := crypto.SignerOpts(sigHash)
 	if sigType == signatureRSAPSS {
-		signOpts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: sigHash}
+		signOpts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: toCryptoHash(sigHash)}
 	}
 	sig, err := priv.Sign(config.rand(), signed, signOpts)
 	if err != nil {
@@ -291,7 +288,7 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *config, clientHell
 	copy(ka.ckx.ciphertext[1:], ourPublicKey)
 
 	var sigType uint8
-	var sigHash crypto.Hash
+	var sigHash x509.Hash
 	if ka.version >= VersionTLS12 {
 		signatureAlgorithm := SignatureScheme(sig[0])<<8 | SignatureScheme(sig[1])
 		sig = sig[2:]

@@ -1,12 +1,18 @@
 package qtls
 
 import (
+	"crypto"
+	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"reflect"
 	"unsafe"
 )
 
 func toConnectionState(c connectionState) ConnectionState {
 	return *(*ConnectionState)(unsafe.Pointer(&c))
+}
+
+func toCryptoHash(h x509.Hash) crypto.Hash {
+	return *(*crypto.Hash)(&h)
 }
 
 func toClientSessionState(s *clientSessionState) *ClientSessionState {

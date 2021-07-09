@@ -633,7 +633,7 @@ func (hs *serverHandshakeState) doFullHandshake() error {
 		}
 
 		var sigType uint8
-		var sigHash crypto.Hash
+		var sigHash x509.Hash
 		if c.vers >= VersionTLS12 {
 			if !isSupportedSignatureAlgorithm(certVerify.signatureAlgorithm, certReq.supportedSignatureAlgorithms) {
 				c.sendAlert(alertIllegalParameter)

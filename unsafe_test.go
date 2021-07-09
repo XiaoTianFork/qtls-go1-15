@@ -158,3 +158,9 @@ func TestClientSessionStateReinterpretCast(t *testing.T) {
 		t.Fatal("failed")
 	}
 }
+
+func TestCryptoHash(t *testing.T) {
+	sha256 := x509.SHA256
+	h := toCryptoHash(sha256)
+	h.New()
+}

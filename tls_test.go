@@ -1178,6 +1178,7 @@ func TestConnectionState(t *testing.T) {
 			serverConfig.Certificates[0].PrivateKey = sm2LeafPrivateKeyByte
 			serverConfig.Certificates[0].SignedCertificateTimestamps = scts
 			serverConfig.Certificates[0].OCSPStaple = ocsp
+			serverConfig.PreferServerCipherSuites = true
 
 			ss, cs, err := testHandshake(t, clientConfig, serverConfig)
 			if err != nil {

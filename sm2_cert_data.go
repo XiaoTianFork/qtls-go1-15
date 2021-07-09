@@ -1,7 +1,6 @@
 package qtls
 
 import (
-	"encoding/asn1"
 	"encoding/base64"
 	"github.com/xiaotianfork/qtls-go1-15/sm2"
 	"github.com/xiaotianfork/qtls-go1-15/x509"
@@ -225,13 +224,6 @@ func base64ToByte(cert string) []byte {
 	return bytes
 }
 
-type sm2PrivateKey struct {
-	Version       int
-	PrivateKey    []byte
-	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
-	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
-}
-
 func ParseSm2PrivateKey(privateKeyString string) *sm2.PrivateKey {
 	daBuf := base64ToByte(privateKeyString)
 	key, err := x509.ParseSm2PrivateKey(daBuf)
@@ -242,3 +234,12 @@ func ParseSm2PrivateKey(privateKeyString string) *sm2.PrivateKey {
 }
 
 var sm2LeafPrivateKeyByte = ParseSm2PrivateKey("MHcCAQEEIJ0I4yR5ezlVWygUi7+NNipNJSBqUjaCopitIJMU1nlSoAoGCCqBHM9V\nAYItoUQDQgAEMbiGjBxkDrC1rwuVlIC/6fbGdnaKxj2/Lkv9EcOLKv3WFuFi1eae\nUvQSkNcRMdaAixpM+RKQ+Cp6Z3szJUr0jQ==")
+
+func ParsePKCS8UnecryptedPrivateKey(privateKeyString string) *sm2.PrivateKey {
+	daBuf := base64ToByte(privateKeyString)
+	key, err := x509.ParsePKCS8UnecryptedPrivateKey(daBuf)
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
