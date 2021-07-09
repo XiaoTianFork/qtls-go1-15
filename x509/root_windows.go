@@ -249,6 +249,7 @@ func (c *Certificate) systemVerify(opts *VerifyOptions) (chains [][]*Certificate
 	// using spoofed parameters, the signature will be invalid for the correct
 	// ones we parsed. (We don't support custom curves ourselves.)
 	for i, parent := range chain[1:] {
+		//todo sfl sm2?
 		if parent.PublicKeyAlgorithm != ECDSA {
 			continue
 		}

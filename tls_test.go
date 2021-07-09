@@ -1125,7 +1125,7 @@ func TestConnectionStateMarshal(t *testing.T) {
 
 func TestConnectionState(t *testing.T) {
 	rootCAs := x509.NewCertPool()
-	issuer, err := x509.ParseCertificate(sm2IntermediateCertByte)
+	issuer, err := x509.ParseCertificate(gmsmRootCertByte)
 	if err != nil {
 		panic(err)
 	}
@@ -1134,7 +1134,7 @@ func TestConnectionState(t *testing.T) {
 	now := func() time.Time { return time.Now() }
 
 	const alpnProtocol = "golang"
-	const serverName = "alipay.com"
+	const serverName = "localhost"
 	var scts = [][]byte{[]byte("dummy sct 1"), []byte("dummy sct 2")}
 	var ocsp = []byte("dummy ocsp")
 
@@ -1158,8 +1158,8 @@ func TestConnectionState(t *testing.T) {
 				NextProtos:   []string{alpnProtocol},
 				ServerName:   serverName,
 			}
-			clientConfig.Certificates[0].Certificate = [][]byte{sm2LeafCertByte}
-			clientConfig.Certificates[0].PrivateKey = sm2LeafPrivateKeyByte
+			clientConfig.Certificates[0].Certificate = [][]byte{gmsmLeafCertByte}
+			clientConfig.Certificates[0].PrivateKey = gmsmLeafPrivateKeyByte
 			clientConfig.Certificates[0].SignedCertificateTimestamps = scts
 			clientConfig.Certificates[0].OCSPStaple = ocsp
 
@@ -1174,8 +1174,8 @@ func TestConnectionState(t *testing.T) {
 				NextProtos:   []string{alpnProtocol},
 				ServerName:   "",
 			}
-			serverConfig.Certificates[0].Certificate = [][]byte{sm2LeafCertByte}
-			serverConfig.Certificates[0].PrivateKey = sm2LeafPrivateKeyByte
+			serverConfig.Certificates[0].Certificate = [][]byte{gmsmLeafCertByte}
+			serverConfig.Certificates[0].PrivateKey = gmsmLeafPrivateKeyByte
 			serverConfig.Certificates[0].SignedCertificateTimestamps = scts
 			serverConfig.Certificates[0].OCSPStaple = ocsp
 			serverConfig.PreferServerCipherSuites = true

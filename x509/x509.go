@@ -98,6 +98,19 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 	case ed25519.PublicKey:
 		publicKeyBytes = pub
 		publicKeyAlgorithm.Algorithm = oidPublicKeyEd25519
+	case *sm2.PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+		oid, ok := oidFromNamedCurve(pub.Curve)
+		if !ok {
+			return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: unsupported SM2 curve")
+		}
+		publicKeyAlgorithm.Algorithm = oidPublicKeyECDSA
+		var paramBytes []byte
+		paramBytes, err = asn1.Marshal(oid)
+		if err != nil {
+			return
+		}
+		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
 	default:
 		return nil, pkix.AlgorithmIdentifier{}, fmt.Errorf("x509: unsupported public key type: %T", pub)
 	}
@@ -325,7 +338,7 @@ var (
 	oidMGF1 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 8}
 
 	//sm2
-	oidSignatureSM2WithSM3    = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
+	oidSignatureSM2WithSM3 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
 
 	// oidISOSignatureSHA1WithRSA means the same as oidSignatureSHA1WithRSA
 	// but it's specified by ISO. Microsoft's makecert.exe has been known
@@ -488,9 +501,10 @@ func getSignatureAlgorithmFromAI(ai pkix.AlgorithmIdentifier) SignatureAlgorithm
 // id-ecPublicKey OBJECT IDENTIFIER ::= {
 //       iso(1) member-body(2) us(840) ansi-X9-62(10045) keyType(2) 1 }
 var (
-	oidPublicKeyRSA     = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
-	oidPublicKeyDSA     = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
-	oidPublicKeyECDSA   = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+	oidPublicKeyRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
+	oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
+	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+
 	oidPublicKeyEd25519 = oidSignatureEd25519
 )
 
@@ -858,6 +872,9 @@ type sm2Signature dsaSignature
 // CheckSignature verifies that signature is a valid signature over signed from
 // a crypto.PublicKey.
 func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey crypto.PublicKey) (err error) {
+	singContext := make([]byte, len(signed))
+	copy(singContext, signed)
+
 	var hashType Hash
 	var pubKeyAlgo PublicKeyAlgorithm
 
@@ -880,7 +897,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 			return ErrUnsupportedAlgorithm
 		}
 		h := hashType.New()
-		h.Write(signed)
+		//h.Write(signed)
 		signed = h.Sum(nil)
 	}
 
@@ -940,14 +957,15 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		if rest, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
 			return err
 		} else if len(rest) != 0 {
-			return errors.New("x509: trailing data after ECDSA signature")
+			return errors.New("x509: trailing data after SM2 signature")
 		}
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
-			return errors.New("x509: ECDSA signature contained zero or negative values")
+			return errors.New("x509: SM2 signature contained zero or negative values")
 		}
-		if !sm2.Sm2Verify(pub, signed, nil, ecdsaSig.R, ecdsaSig.S) {
+		if !pub.Verify(singContext, signature) {
 			return errors.New("x509: SM2 verification failure")
 		}
+		return
 	}
 	return ErrUnsupportedAlgorithm
 }
@@ -2014,7 +2032,6 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 
 	case *ecdsa.PublicKey:
 		pubType = ECDSA
-
 		switch pub.Curve {
 		case elliptic.P224(), elliptic.P256():
 			hashFunc = SHA256
@@ -2031,6 +2048,10 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 	case ed25519.PublicKey:
 		pubType = Ed25519
 		sigAlgo.Algorithm = oidSignatureEd25519
+	case *sm2.PublicKey:
+		pubType = ECDSA
+		hashFunc = SM3
+		sigAlgo.Algorithm = oidSignatureSM2WithSM3
 	default:
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}

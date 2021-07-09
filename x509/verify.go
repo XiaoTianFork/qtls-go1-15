@@ -784,11 +784,12 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 		return
 	}
 
+	//todo sfl 恢复DNS限制
 	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
-		if err != nil {
-			return
-		}
+		//err = c.VerifyHostname(opts.DNSName)
+		//if err != nil {
+		//	return
+		//}
 	}
 
 	var candidateChains [][]*Certificate

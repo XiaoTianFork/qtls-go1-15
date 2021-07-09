@@ -76,7 +76,6 @@ func ParsePKCS8PrivateKey(der []byte) (key interface{}, err error) {
 			return nil, fmt.Errorf("x509: invalid Ed25519 private key length: %d", l)
 		}
 		return ed25519.NewKeyFromSeed(curvePrivateKey), nil
-
 	default:
 		return nil, fmt.Errorf("x509: PKCS#8 wrapping contained private key with unknown algorithm: %v", privKey.Algo.Algorithm)
 	}
@@ -190,7 +189,7 @@ func ParsePKCS8UnecryptedPrivateKey(der []byte) (*sm2.PrivateKey, error) {
 	if _, err := asn1.Unmarshal(der, &privKey); err != nil {
 		return nil, err
 	}
-	if !reflect.DeepEqual(privKey.Algo.Algorithm, oidSignatureSM2WithSM3) {
+	if !reflect.DeepEqual(privKey.Algo.Algorithm, oidPublicKeyECDSA) {
 		return nil, errors.New("x509: not sm2 elliptic curve")
 	}
 	return ParseSm2PrivateKey(privKey.PrivateKey)
