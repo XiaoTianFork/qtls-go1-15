@@ -2,10 +2,15 @@ package qtls
 
 import (
 	"crypto"
+	"crypto/tls"
 	"github.com/xiaotianfork/qtls-go1-15/x509"
 	"reflect"
 	"unsafe"
 )
+
+func fromConfig(c *tls.Config) *config {
+	return (*config)(unsafe.Pointer(c))
+}
 
 func toConnectionState(c connectionState) ConnectionState {
 	return *(*ConnectionState)(unsafe.Pointer(&c))
