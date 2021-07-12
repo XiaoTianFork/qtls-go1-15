@@ -387,7 +387,7 @@ const (
 
 // ClientHelloInfo contains information from a ClientHello message in order to
 // guide application logic in the GetCertificate and GetConfigForClient callbacks.
-type clientHelloInfo struct {
+type ClientHelloInfo struct {
 	// CipherSuites lists the CipherSuites supported by the client (e.g.
 	// TLS_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256).
 	CipherSuites []uint16
@@ -433,7 +433,7 @@ type clientHelloInfo struct {
 
 	// config is embedded by the GetCertificate or GetConfigForClient caller,
 	// for use with SupportsCertificate.
-	config *config
+	config *Config
 }
 
 // CertificateRequestInfo contains information from a server's
@@ -488,7 +488,7 @@ const (
 // modified. A Config may be reused; the tls package will also not
 // modify it.
 
-type config struct {
+type Config struct {
 	// Rand provides the source of entropy for nonces and RSA blinding.
 	// If Rand is nil, TLS uses the cryptographic random reader in package
 	// crypto/rand.
@@ -528,7 +528,7 @@ type config struct {
 	// If GetCertificate is nil or returns nil, then the certificate is
 	// retrieved from NameToCertificate. If NameToCertificate is nil, the
 	// best element of Certificates will be used.
-	GetCertificate func(info *clientHelloInfo) (*Certificate, error)
+	GetCertificate func(info *ClientHelloInfo) (*Certificate, error)
 
 	// GetClientCertificate, if not nil, is called when a server requests a
 	// certificate from a client. If set, the contents of Certificates will
@@ -558,7 +558,7 @@ type config struct {
 	// SetSessionTicketKeys was called on the returned Config, those keys will
 	// be used. Otherwise, the original Config keys will be used (and possibly
 	// rotated if they are automatically managed).
-	GetConfigForClient func(info *clientHelloInfo) (*config, error)
+	GetConfigForClient func(info *ClientHelloInfo) (*Config, error)
 
 	// VerifyPeerCertificate, if not nil, is called after normal
 	// certificate verification by either a TLS client or server. It
@@ -809,7 +809,7 @@ type ticketKey struct {
 // ticketKeyFromBytes converts from the external representation of a session
 // ticket key to a ticketKey. Externally, session ticket keys are 32 random
 // bytes and this function expands that into sufficient name and key material.
-func (c *config) ticketKeyFromBytes(b [32]byte) (key ticketKey) {
+func (c *Config) ticketKeyFromBytes(b [32]byte) (key ticketKey) {
 	hashed := sha512.Sum512(b[:])
 	copy(key.keyName[:], hashed[:ticketKeyNameLen])
 	copy(key.aesKey[:], hashed[ticketKeyNameLen:ticketKeyNameLen+16])
@@ -824,10 +824,10 @@ const maxSessionTicketLifetime = 7 * 24 * time.Hour
 
 // Clone returns a shallow clone of c. It is safe to clone a Config that is
 // being used concurrently by a TLS client or server.
-func (c *config) Clone() *config {
+func (c *Config) Clone() *Config {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return &config{
+	return &Config{
 		Rand:                        c.Rand,
 		Time:                        c.Time,
 		Certificates:                c.Certificates,
@@ -865,7 +865,7 @@ var deprecatedSessionTicketKey = []byte("DEPRECATED")
 
 // initLegacySessionTicketKeyRLocked ensures the legacy SessionTicketKey field is
 // randomized if empty, and that sessionTicketKeys is populated from it otherwise.
-func (c *config) initLegacySessionTicketKeyRLocked() {
+func (c *Config) initLegacySessionTicketKeyRLocked() {
 	// Don't write if SessionTicketKey is already defined as our deprecated string,
 	// or if it is defined by the user but sessionTicketKeys is already set.
 	if c.SessionTicketKey != [32]byte{} &&
@@ -902,7 +902,7 @@ func (c *config) initLegacySessionTicketKeyRLocked() {
 // encrypting tickets (ie. the first ticketKey in c.sessionTicketKeys)
 // is not fresh, then a new session ticket key will be
 // created and prepended to c.sessionTicketKeys.
-func (c *config) ticketKeys(configForClient *config) []ticketKey {
+func (c *Config) ticketKeys(configForClient *Config) []ticketKey {
 	// If the ConfigForClient callback returned a Config with explicitly set
 	// keys, use those, otherwise just use the original Config.
 	if configForClient != nil {
@@ -970,7 +970,7 @@ func (c *config) ticketKeys(configForClient *config) []ticketKey {
 // all have the same session ticket keys. If the session ticket keys leaks,
 // previously recorded and future TLS connections using those keys might be
 // compromised.
-func (c *config) SetSessionTicketKeys(keys [][32]byte) {
+func (c *Config) SetSessionTicketKeys(keys [][32]byte) {
 	if len(keys) == 0 {
 		panic("tls: keys must have at least one key")
 	}
@@ -985,7 +985,7 @@ func (c *config) SetSessionTicketKeys(keys [][32]byte) {
 	c.mutex.Unlock()
 }
 
-func (c *config) rand() io.Reader {
+func (c *Config) rand() io.Reader {
 	r := c.Rand
 	if r == nil {
 		return rand.Reader
@@ -993,7 +993,7 @@ func (c *config) rand() io.Reader {
 	return r
 }
 
-func (c *config) time() time.Time {
+func (c *Config) time() time.Time {
 	t := c.Time
 	if t == nil {
 		t = time.Now
@@ -1001,7 +1001,7 @@ func (c *config) time() time.Time {
 	return t()
 }
 
-func (c *config) cipherSuites() []uint16 {
+func (c *Config) cipherSuites() []uint16 {
 	s := c.CipherSuites
 	if s == nil {
 		s = defaultCipherSuites()
@@ -1016,7 +1016,7 @@ var supportedVersions = []uint16{
 	VersionTLS10,
 }
 
-func (c *config) supportedVersions() []uint16 {
+func (c *Config) supportedVersions() []uint16 {
 	versions := make([]uint16, 0, len(supportedVersions))
 	for _, v := range supportedVersions {
 		if c != nil && c.MinVersion != 0 && v < c.MinVersion {
@@ -1030,7 +1030,7 @@ func (c *config) supportedVersions() []uint16 {
 	return versions
 }
 
-func (c *config) maxSupportedVersion() uint16 {
+func (c *Config) maxSupportedVersion() uint16 {
 	supportedVersions := c.supportedVersions()
 	if len(supportedVersions) == 0 {
 		return 0
@@ -1054,14 +1054,14 @@ func supportedVersionsFromMax(maxVersion uint16) []uint16 {
 
 var defaultCurvePreferences = []CurveID{CurveSM2, X25519, CurveP256, CurveP384, CurveP521}
 
-func (c *config) curvePreferences() []CurveID {
+func (c *Config) curvePreferences() []CurveID {
 	if c == nil || len(c.CurvePreferences) == 0 {
 		return defaultCurvePreferences
 	}
 	return c.CurvePreferences
 }
 
-func (c *config) supportsCurve(curve CurveID) bool {
+func (c *Config) supportsCurve(curve CurveID) bool {
 	for _, cc := range c.curvePreferences() {
 		if cc == curve {
 			return true
@@ -1072,7 +1072,7 @@ func (c *config) supportsCurve(curve CurveID) bool {
 
 // mutualVersion returns the protocol version to use given the advertised
 // versions of the peer. Priority is given to the peer preference order.
-func (c *config) mutualVersion(peerVersions []uint16) (uint16, bool) {
+func (c *Config) mutualVersion(peerVersions []uint16) (uint16, bool) {
 	supportedVersions := c.supportedVersions()
 	for _, peerVersion := range peerVersions {
 		for _, v := range supportedVersions {
@@ -1088,7 +1088,7 @@ var errNoCertificates = errors.New("tls: no certificates configured")
 
 // getCertificate returns the best certificate for the given ClientHelloInfo,
 // defaulting to the first element of c.Certificates.
-func (c *config) getCertificate(clientHello *clientHelloInfo) (*Certificate, error) {
+func (c *Config) getCertificate(clientHello *ClientHelloInfo) (*Certificate, error) {
 	if c.GetCertificate != nil &&
 		(len(c.Certificates) == 0 || len(clientHello.ServerName) > 0) {
 		cert, err := c.GetCertificate(clientHello)
@@ -1142,7 +1142,7 @@ func (c *config) getCertificate(clientHello *clientHelloInfo) (*Certificate, err
 //
 // This function will call x509.ParseCertificate unless c.Leaf is set, which can
 // incur a significant performance cost.
-func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
+func (chi *ClientHelloInfo) SupportsCertificate(c *Certificate) error {
 	// Note we don't currently support certificate_authorities nor
 	// signature_algorithms_cert, and don't check the algorithms of the
 	// signatures on the chain (which anyway are a SHOULD, see RFC 8446,
@@ -1150,7 +1150,7 @@ func (chi *clientHelloInfo) SupportsCertificate(c *Certificate) error {
 
 	config1 := chi.config
 	if config1 == nil {
-		config1 = &config{}
+		config1 = &Config{}
 	}
 	conf := config1
 	vers, ok := conf.mutualVersion(chi.SupportedVersions)
@@ -1335,7 +1335,7 @@ func (cri *CertificateRequestInfo) SupportsCertificate(c *Certificate) error {
 // Deprecated: NameToCertificate only allows associating a single certificate
 // with a given name. Leave that field nil to let the library select the first
 // compatible chain from Certificates.
-func (c *config) BuildNameToCertificate() {
+func (c *Config) BuildNameToCertificate() {
 	c.NameToCertificate = make(map[string]*Certificate)
 	for i := range c.Certificates {
 		cert := &c.Certificates[i]
@@ -1361,7 +1361,7 @@ const (
 	keyLogLabelServerTraffic   = "SERVER_TRAFFIC_SECRET_0"
 )
 
-func (c *config) writeKeyLog(label string, clientRandom, secret []byte) error {
+func (c *Config) writeKeyLog(label string, clientRandom, secret []byte) error {
 	if c.KeyLogWriter == nil {
 		return nil
 	}
@@ -1493,9 +1493,9 @@ func (c *lruSessionCache) Get(sessionKey string) (*ClientSessionState, bool) {
 	return nil, false
 }
 
-var emptyConfig config
+var emptyConfig Config
 
-func defaultConfig() *config {
+func defaultConfig() *Config {
 	return &emptyConfig
 }
 

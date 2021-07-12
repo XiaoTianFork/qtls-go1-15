@@ -241,7 +241,7 @@ func (c *Conn) getSessionTicketMsg(appData []byte) (*newSessionTicketMsgTLS13, e
 // GetSessionTicket generates a new session ticket.
 // It should only be called after the handshake completes.
 // It can only be used for servers, and only if the alternative record layer is set.
-// The ticket may be nil if config.SessionTicketsDisabled is set,
+// The ticket may be nil if Config.SessionTicketsDisabled is set,
 // or if the client isn't able to receive session tickets.
 func (c *Conn) GetSessionTicket(appData []byte) ([]byte, error) {
 	if c.isClient || !c.handshakeComplete() || c.extraConfig == nil || c.extraConfig.AlternativeRecordLayer == nil {

@@ -322,7 +322,7 @@ func TestRejectConfigWithOldMaxVersion(t *testing.T) {
 		}()
 
 		config1 := testConfig.Clone()
-		config1.GetConfigForClient = func(*clientHelloInfo) (*config, error) {
+		config1.GetConfigForClient = func(*ClientHelloInfo) (*Config, error) {
 			conf := testConfig.Clone()
 			conf.MaxVersion = VersionTLS12
 			return conf, nil

@@ -73,7 +73,7 @@ var certWildcardExampleCom = `308201743082011ea003020102021100a7aa6297c9416a4633
 var certFooExampleCom = `308201753082011fa00302010202101bbdb6070b0aeffc49008cde74deef29300d06092a864886f70d01010b050030123110300e060355040a130741636d6520436f301e170d3136303831373231343234345a170d3137303831373231343234345a30123110300e060355040a130741636d6520436f305c300d06092a864886f70d0101010500034b003048024100f00ac69d8ca2829f26216c7b50f1d4bbabad58d447706476cd89a2f3e1859943748aa42c15eedc93ac7c49e40d3b05ed645cb6b81c4efba60d961f44211a54eb0203010001a351304f300e0603551d0f0101ff0404030205a030130603551d25040c300a06082b06010505070301300c0603551d130101ff04023000301a0603551d1104133011820f666f6f2e6578616d706c652e636f6d300d06092a864886f70d01010b0500034100a0957fca6d1e0f1ef4b247348c7a8ca092c29c9c0ecc1898ea6b8065d23af6d922a410dd2335a0ea15edd1394cef9f62c9e876a21e35250a0b4fe1ddceba0f36`
 
 func TestCertificateSelection(t *testing.T) {
-	config := config{
+	config := Config{
 		Certificates: []Certificate{
 			{
 				Certificate: [][]byte{fromHex(certExampleCom)},
@@ -99,7 +99,7 @@ func TestCertificateSelection(t *testing.T) {
 	}
 
 	certificateForName := func(name string) *Certificate {
-		clientHello := &clientHelloInfo{
+		clientHello := &ClientHelloInfo{
 			ServerName: name,
 		}
 		if cert, err := config.getCertificate(clientHello); err != nil {
@@ -125,7 +125,7 @@ func TestCertificateSelection(t *testing.T) {
 }
 
 // Run with multiple crypto configs to test the logic for computing TLS record overheads.
-func runDynamicRecordSizingTest(t *testing.T, config *config) {
+func runDynamicRecordSizingTest(t *testing.T, config *Config) {
 	clientConn, serverConn := localPipe(t)
 
 	serverConfig := config.Clone()
@@ -275,8 +275,8 @@ func TestHairpinInClose(t *testing.T) {
 	defer client.Close()
 
 	conn := &hairpinConn{client, nil}
-	tlsConn := Server(conn, &config{
-		GetCertificate: func(*clientHelloInfo) (*Certificate, error) {
+	tlsConn := Server(conn, &Config{
+		GetCertificate: func(*ClientHelloInfo) (*Certificate, error) {
 			panic("unreachable")
 		},
 	}, nil)

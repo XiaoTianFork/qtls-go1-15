@@ -1064,7 +1064,7 @@ const clientSessionCacheKeyPrefix = "qtls-"
 
 // clientSessionCacheKey returns a key used to cache sessionTickets that could
 // be used to resume previously negotiated TLS sessions with a server.
-func clientSessionCacheKey(serverAddr net.Addr, config *config) string {
+func clientSessionCacheKey(serverAddr net.Addr, config *Config) string {
 	if len(config.ServerName) > 0 {
 		return clientSessionCacheKeyPrefix + config.ServerName
 	}

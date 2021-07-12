@@ -144,7 +144,7 @@ func (c *Conn) readClientHello() (*clientHelloMsg, error) {
 		return nil, unexpectedMessageError(clientHello, msg)
 	}
 
-	var configForClient *config
+	var configForClient *Config
 	originalConfig := c.config
 	if c.config.GetConfigForClient != nil {
 		chi := newClientHelloInfo(c, clientHello)
@@ -177,7 +177,7 @@ func (c *Conn) readClientHello() (*clientHelloMsg, error) {
 				}
 			}
 		}
-		// Make the config we're using allows us to use TLS 1.3.
+		// Make the Config we're using allows us to use TLS 1.3.
 		if c.config.maxSupportedVersion() < VersionTLS13 {
 			c.sendAlert(alertInternalError)
 			return nil, errors.New("tls: MaxVersion prevents QUIC from using TLS 1.3")
@@ -303,7 +303,7 @@ func (hs *serverHandshakeState) processClientHello() error {
 
 // supportsECDHE returns whether ECDHE key exchanges can be used with this
 // pre-TLS 1.3 client.
-func supportsECDHE(c *config, supportedCurves []CurveID, supportedPoints []uint8) bool {
+func supportsECDHE(c *Config, supportedCurves []CurveID, supportedPoints []uint8) bool {
 	supportsCurve := false
 	for _, curve := range supportedCurves {
 		if c.supportsCurve(curve) {
@@ -845,13 +845,13 @@ func (c *Conn) processCertsFromClient(certificate Certificate) error {
 	return nil
 }
 
-func newClientHelloInfo(c *Conn, clientHello *clientHelloMsg) *clientHelloInfo {
+func newClientHelloInfo(c *Conn, clientHello *clientHelloMsg) *ClientHelloInfo {
 	supportedVersions := clientHello.supportedVersions
 	if len(clientHello.supportedVersions) == 0 {
 		supportedVersions = supportedVersionsFromMax(clientHello.vers)
 	}
 
-	return &clientHelloInfo{
+	return &ClientHelloInfo{
 		CipherSuites:      clientHello.cipherSuites,
 		ServerName:        clientHello.serverName,
 		SupportedCurves:   clientHello.supportedCurves,

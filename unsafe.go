@@ -8,8 +8,8 @@ import (
 	"unsafe"
 )
 
-func fromConfig(c *tls.Config) *config {
-	return (*config)(unsafe.Pointer(c))
+func fromConfig(c *tls.Config) *Config {
+	return (*Config)(unsafe.Pointer(c))
 }
 
 func toConnectionState(c connectionState) ConnectionState {

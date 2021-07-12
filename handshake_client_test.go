@@ -128,7 +128,7 @@ type clientTest struct {
 	// command to run for the reference server.
 	args []string
 	// config, if not nil, contains a custom Config to use for this test.
-	config *config
+	config *Config
 	// extraConfig contains a custom ExtraConfig to use for this test.
 	extraConfig *ExtraConfig
 	// cert, if not empty, contains a DER-encoded certificate for the
@@ -892,7 +892,7 @@ func testResumption(t *testing.T, version uint16, saveAppData bool) {
 	if testing.Short() {
 		t.Skip("skipping in -short mode")
 	}
-	serverConfig := &config{
+	serverConfig := &Config{
 		MaxVersion:   version,
 		CipherSuites: []uint16{TLS_RSA_WITH_RC4_128_SHA, TLS_ECDHE_RSA_WITH_RC4_128_SHA},
 		Certificates: testConfig.Certificates,
@@ -907,7 +907,7 @@ func testResumption(t *testing.T, version uint16, saveAppData bool) {
 	rootCAs.AddCert(issuer)
 
 	var restoredAppData []byte
-	clientConfig := &config{
+	clientConfig := &Config{
 		MaxVersion:         version,
 		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
 		ClientSessionCache: NewLRUClientSessionCache(32),
@@ -1035,7 +1035,7 @@ func testResumption(t *testing.T, version uint16, saveAppData bool) {
 
 	// Reset serverConfig to ensure that calling SetSessionTicketKeys
 	// before the serverConfig is used works.
-	serverConfig = &config{
+	serverConfig = &Config{
 		MaxVersion:   version,
 		CipherSuites: []uint16{TLS_RSA_WITH_RC4_128_SHA, TLS_ECDHE_RSA_WITH_RC4_128_SHA},
 		Certificates: testConfig.Certificates,
@@ -1512,7 +1512,7 @@ func TestHostnameInSNI(t *testing.T) {
 		c, s := localPipe(t)
 
 		go func(host string) {
-			Client(c, &config{ServerName: host, InsecureSkipVerify: true}, nil).Handshake()
+			Client(c, &Config{ServerName: host, InsecureSkipVerify: true}, nil).Handshake()
 		}(tt.in)
 
 		var header [5]byte
@@ -1551,7 +1551,7 @@ func TestServerSelectingUnconfiguredCipherSuite(t *testing.T) {
 	errChan := make(chan error, 1)
 
 	go func() {
-		client := Client(c, &config{
+		client := Client(c, &Config{
 			ServerName:   "foo",
 			CipherSuites: []uint16{TLS_RSA_WITH_AES_128_GCM_SHA256},
 		}, nil)
@@ -1627,12 +1627,12 @@ func testVerifyConnection(t *testing.T, version uint16) {
 
 	tests := []struct {
 		name            string
-		configureServer func(*config, *int)
-		configureClient func(*config, *int)
+		configureServer func(*Config, *int)
+		configureClient func(*Config, *int)
 	}{
 		{
 			name: "RequireAndVerifyClientCert",
-			configureServer: func(config *config, called *int) {
+			configureServer: func(config *Config, called *int) {
 				config.ClientAuth = RequireAndVerifyClientCert
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
@@ -1645,7 +1645,7 @@ func testVerifyConnection(t *testing.T, version uint16) {
 					return checkFields(c, called, "server")
 				}
 			},
-			configureClient: func(config *config, called *int) {
+			configureClient: func(config *Config, called *int) {
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
 					if l := len(c.PeerCertificates); l != 1 {
@@ -1671,7 +1671,7 @@ func testVerifyConnection(t *testing.T, version uint16) {
 		},
 		{
 			name: "InsecureSkipVerify",
-			configureServer: func(config *config, called *int) {
+			configureServer: func(config *Config, called *int) {
 				config.ClientAuth = RequireAnyClientCert
 				config.InsecureSkipVerify = true
 				config.VerifyConnection = func(c ConnectionState) error {
@@ -1685,7 +1685,7 @@ func testVerifyConnection(t *testing.T, version uint16) {
 					return checkFields(c, called, "server")
 				}
 			},
-			configureClient: func(config *config, called *int) {
+			configureClient: func(config *Config, called *int) {
 				config.InsecureSkipVerify = true
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
@@ -1712,14 +1712,14 @@ func testVerifyConnection(t *testing.T, version uint16) {
 		},
 		{
 			name: "NoClientCert",
-			configureServer: func(config *config, called *int) {
+			configureServer: func(config *Config, called *int) {
 				config.ClientAuth = NoClientCert
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
 					return checkFields(c, called, "server")
 				}
 			},
-			configureClient: func(config *config, called *int) {
+			configureClient: func(config *Config, called *int) {
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
 					return checkFields(c, called, "client")
@@ -1728,14 +1728,14 @@ func testVerifyConnection(t *testing.T, version uint16) {
 		},
 		{
 			name: "RequestClientCert",
-			configureServer: func(config *config, called *int) {
+			configureServer: func(config *Config, called *int) {
 				config.ClientAuth = RequestClientCert
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
 					return checkFields(c, called, "server")
 				}
 			},
-			configureClient: func(config *config, called *int) {
+			configureClient: func(config *Config, called *int) {
 				config.Certificates = nil // clear the client cert
 				config.VerifyConnection = func(c ConnectionState) error {
 					*called++
@@ -1771,7 +1771,7 @@ func testVerifyConnection(t *testing.T, version uint16) {
 
 		var serverCalled, clientCalled int
 
-		serverConfig := &config{
+		serverConfig := &Config{
 			MaxVersion:   version,
 			Certificates: []Certificate{testConfig.Certificates[0]},
 			ClientCAs:    rootCAs,
@@ -1781,7 +1781,7 @@ func testVerifyConnection(t *testing.T, version uint16) {
 		serverConfig.Certificates[0].OCSPStaple = []byte("dummy ocsp")
 		test.configureServer(serverConfig, &serverCalled)
 
-		clientConfig := &config{
+		clientConfig := &Config{
 			MaxVersion:         version,
 			ClientSessionCache: NewLRUClientSessionCache(32),
 			RootCAs:            rootCAs,
@@ -1858,18 +1858,18 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 	}
 
 	tests := []struct {
-		configureServer func(*config, *bool)
-		configureClient func(*config, *bool)
+		configureServer func(*Config, *bool)
+		configureClient func(*Config, *bool)
 		validate        func(t *testing.T, testNo int, clientCalled, serverCalled bool, clientErr, serverErr error)
 	}{
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return verifyPeerCertificateCallback(called, rawCerts, validatedChains)
 				}
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return verifyPeerCertificateCallback(called, rawCerts, validatedChains)
@@ -1891,13 +1891,13 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return sentinelErr
 				}
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.VerifyPeerCertificate = nil
 			},
 			validate: func(t *testing.T, testNo int, clientCalled, serverCalled bool, clientErr, serverErr error) {
@@ -1907,10 +1907,10 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return sentinelErr
 				}
@@ -1922,10 +1922,10 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = true
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					if l := len(rawCerts); l != 1 {
@@ -1954,13 +1954,13 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = func(c ConnectionState) error {
 					return verifyConnectionCallback(called, false, c)
 				}
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = func(c ConnectionState) error {
 					return verifyConnectionCallback(called, true, c)
@@ -1982,13 +1982,13 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = func(c ConnectionState) error {
 					return sentinelErr
 				}
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = nil
 			},
@@ -1999,11 +1999,11 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = nil
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyConnection = func(c ConnectionState) error {
 					return sentinelErr
@@ -2016,7 +2016,7 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return verifyPeerCertificateCallback(called, rawCerts, validatedChains)
@@ -2025,7 +2025,7 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 					return sentinelErr
 				}
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = nil
 				config.VerifyConnection = nil
@@ -2040,12 +2040,12 @@ func testVerifyPeerCertificate(t *testing.T, version uint16) {
 			},
 		},
 		{
-			configureServer: func(config *config, called *bool) {
+			configureServer: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = nil
 				config.VerifyConnection = nil
 			},
-			configureClient: func(config *config, called *bool) {
+			configureClient: func(config *Config, called *bool) {
 				config.InsecureSkipVerify = false
 				config.VerifyPeerCertificate = func(rawCerts [][]byte, validatedChains [][]*x509.Certificate) error {
 					return verifyPeerCertificateCallback(called, rawCerts, validatedChains)
@@ -2309,12 +2309,12 @@ func TestHandshakeRace(t *testing.T) {
 }
 
 var getClientCertificateTests = []struct {
-	setup               func(*config, *config)
+	setup               func(*Config, *Config)
 	expectedClientError string
 	verify              func(*testing.T, int, *ConnectionState)
 }{
 	{
-		func(clientConfig, serverConfig *config) {
+		func(clientConfig, serverConfig *Config) {
 			// Returning a Certificate with no certificate data
 			// should result in an empty message being sent to the
 			// server.
@@ -2337,7 +2337,7 @@ var getClientCertificateTests = []struct {
 		},
 	},
 	{
-		func(clientConfig, serverConfig *config) {
+		func(clientConfig, serverConfig *Config) {
 			// With TLS 1.1, the SignatureSchemes should be
 			// synthesised from the supported certificate types.
 			clientConfig.MaxVersion = VersionTLS11
@@ -2356,7 +2356,7 @@ var getClientCertificateTests = []struct {
 		},
 	},
 	{
-		func(clientConfig, serverConfig *config) {
+		func(clientConfig, serverConfig *Config) {
 			// Returning an error should abort the handshake with
 			// that error.
 			clientConfig.GetClientCertificate = func(cri *CertificateRequestInfo) (*Certificate, error) {
@@ -2368,7 +2368,7 @@ var getClientCertificateTests = []struct {
 		},
 	},
 	{
-		func(clientConfig, serverConfig *config) {
+		func(clientConfig, serverConfig *Config) {
 			clientConfig.GetClientCertificate = func(cri *CertificateRequestInfo) (*Certificate, error) {
 				if len(cri.AcceptableCAs) == 0 {
 					panic("empty AcceptableCAs")
@@ -2572,7 +2572,7 @@ func testResumptionKeepsOCSPAndSCT(t *testing.T, ver uint16) {
 	}
 	roots := x509.NewCertPool()
 	roots.AddCert(issuer)
-	clientConfig := &config{
+	clientConfig := &Config{
 		MaxVersion:         ver,
 		ClientSessionCache: NewLRUClientSessionCache(32),
 		ServerName:         "example.golang",

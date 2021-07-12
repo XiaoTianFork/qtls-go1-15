@@ -328,7 +328,7 @@ func allCipherSuites() []uint16 {
 	return ids
 }
 
-var testConfig *config
+var testConfig *Config
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -367,7 +367,7 @@ func runMain(m *testing.M) int {
 		os.Exit(1)
 	}
 
-	testConfig = &config{
+	testConfig = &Config{
 		Time:               func() time.Time { return time.Unix(0, 0) },
 		Rand:               zeroSource{},
 		Certificates:       make([]Certificate, 2),
@@ -391,11 +391,11 @@ func runMain(m *testing.M) int {
 	return m.Run()
 }
 
-func testHandshake(t *testing.T, clientConfig, serverConfig *config) (serverState, clientState ConnectionStateWith0RTT, err error) {
+func testHandshake(t *testing.T, clientConfig, serverConfig *Config) (serverState, clientState ConnectionStateWith0RTT, err error) {
 	return testHandshakeWithExtraConfig(t, clientConfig, nil, serverConfig, nil)
 }
 
-func testHandshakeWithExtraConfig(t *testing.T, clientConfig *config, clientExtraConfig *ExtraConfig, serverConfig *config, serverExtraConfig *ExtraConfig) (serverState, clientState ConnectionStateWith0RTT, err error) {
+func testHandshakeWithExtraConfig(t *testing.T, clientConfig *Config, clientExtraConfig *ExtraConfig, serverConfig *Config, serverExtraConfig *ExtraConfig) (serverState, clientState ConnectionStateWith0RTT, err error) {
 	const sentinel = "SENTINEL\n"
 	c, s := localPipe(t)
 	errChan := make(chan error)
