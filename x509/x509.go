@@ -872,7 +872,7 @@ type sm2Signature dsaSignature
 // CheckSignature verifies that signature is a valid signature over signed from
 // a crypto.PublicKey.
 func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey crypto.PublicKey) (err error) {
-	singContext := make([]byte, len(signed))
+	singContext := make([]byte, 0,len(signed))
 	copy(singContext, signed)
 
 	var hashType Hash
@@ -897,7 +897,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 			return ErrUnsupportedAlgorithm
 		}
 		h := hashType.New()
-		//h.Write(signed)
+		h.Write(signed)
 		signed = h.Sum(nil)
 	}
 
