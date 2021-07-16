@@ -79,6 +79,8 @@ func (h Hash) String() string {
 		return "BLAKE2b-384"
 	case BLAKE2b_512:
 		return "BLAKE2b-512"
+	case SM3:
+		return "SM3"
 	default:
 		return "unknown hash value " + strconv.Itoa(int(h))
 	}
