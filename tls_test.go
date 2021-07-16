@@ -1148,7 +1148,7 @@ func TestConnectionState(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			clientConfig := &Config{
-				IsTestModule: true,
+                IsTestModule: true,
 				Time:         now,
 				Rand:         zeroSource{},
 				Certificates: make([]Certificate, 1),
