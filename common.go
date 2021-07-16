@@ -17,14 +17,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/xiaotianfork/qtls-go1-15/sm2"
+	"github.com/xiaotianfork/q-tls-common/sm2"
 	"io"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/q-tls-common/x509"
 	"golang.org/x/sys/cpu"
 )
 
@@ -353,7 +353,7 @@ type clientSessionState struct {
 // goroutines. Up to TLS 1.2, only ticket-based resumption is supported, not
 // SessionID-based resumption. In TLS 1.3 they were merged into PSK modes, which
 // are supported via this interface.
-//go:generate sh -c "mockgen -package qtls -destination mock_client_session_cache_test.go github.com/marten-seemann/qtls-go1-15 ClientSessionCache"
+//go:generate sh -c "mockgen -package qtls -destination mock_client_session_cache_test.go github.com/marten-seemann/q-tls-common ClientSessionCache"
 type ClientSessionCache = tls.ClientSessionCache
 
 // SignatureScheme is a tls.SignatureScheme
@@ -489,6 +489,10 @@ const (
 // modify it.
 
 type Config struct {
+
+	//IsTestModule indicate program run in test module
+	IsTestModule bool
+
 	// Rand provides the source of entropy for nonces and RSA blinding.
 	// If Rand is nil, TLS uses the cryptographic random reader in package
 	// crypto/rand.

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/q-tls-common/x509"
 )
 
 func TestUnsafeConversionIsSafe(t *testing.T) {

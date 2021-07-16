@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	X "github.com/xiaotianfork/qtls-go1-15/x509"
+	X "github.com/xiaotianfork/q-tls-common/x509"
 )
 
 func testClientHello(t *testing.T, serverConfig *Config, m handshakeMessage) {

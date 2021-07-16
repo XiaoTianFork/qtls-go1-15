@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/q-tls-common/x509"
 )
 
 // A Conn represents a secured connection.

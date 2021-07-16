@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/q-tls-common/x509"
 )
 
 var rsaCertPEM = `-----BEGIN CERTIFICATE-----
@@ -1134,7 +1134,7 @@ func TestConnectionState(t *testing.T) {
 	now := func() time.Time { return time.Now() }
 
 	const alpnProtocol = "golang"
-	const serverName = "localhost"
+	const serverName = ""
 	var scts = [][]byte{[]byte("dummy sct 1"), []byte("dummy sct 2")}
 	var ocsp = []byte("dummy ocsp")
 
@@ -1148,6 +1148,7 @@ func TestConnectionState(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			clientConfig := &Config{
+				IsTestModule: true,
 				Time:         now,
 				Rand:         zeroSource{},
 				Certificates: make([]Certificate, 1),

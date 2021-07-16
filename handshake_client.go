@@ -13,14 +13,14 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
-	"github.com/xiaotianfork/qtls-go1-15/sm2"
+	"github.com/xiaotianfork/q-tls-common/sm2"
 	"io"
 	"net"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/xiaotianfork/qtls-go1-15/x509"
+	"github.com/xiaotianfork/q-tls-common/x509"
 	"golang.org/x/crypto/cryptobyte"
 )
 
@@ -38,10 +38,12 @@ type clientHandshakeState struct {
 
 func (c *Conn) makeClientHello() (*clientHelloMsg, ecdheParameters, error) {
 	config := c.config
-	if len(config.ServerName) == 0 && !config.InsecureSkipVerify {
-		return nil, nil, errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
+	if !config.IsTestModule {
+		if len(config.ServerName) == 0 && !config.InsecureSkipVerify {
+			return nil, nil, errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
+		}
 	}
-
+	
 	nextProtosLength := 0
 	for _, proto := range config.NextProtos {
 		if l := len(proto); l == 0 || l > 255 {
