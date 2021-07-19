@@ -489,10 +489,6 @@ const (
 // modify it.
 
 type Config struct {
-
-	//IsTestModule indicate program run in test module
-	IsTestModule bool
-
 	// Rand provides the source of entropy for nonces and RSA blinding.
 	// If Rand is nil, TLS uses the cryptographic random reader in package
 	// crypto/rand.

@@ -38,12 +38,10 @@ type clientHandshakeState struct {
 
 func (c *Conn) makeClientHello() (*clientHelloMsg, ecdheParameters, error) {
 	config := c.config
-	if !config.IsTestModule {
-		if len(config.ServerName) == 0 && !config.InsecureSkipVerify {
-			return nil, nil, errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
-		}
+	if len(config.ServerName) == 0 && !config.InsecureSkipVerify {
+		return nil, nil, errors.New("tls: either ServerName or InsecureSkipVerify must be specified in the tls.Config")
 	}
-	
+
 	nextProtosLength := 0
 	for _, proto := range config.NextProtos {
 		if l := len(proto); l == 0 || l > 255 {
