@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/xiaotianfork/q-tls-common/sm2"
 	"github.com/xiaotianfork/q-tls-common/x509"
 	"io/ioutil"
 	"net"
@@ -363,6 +364,14 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 		}
 		if !bytes.Equal(priv.Public().(ed25519.PublicKey), pub) {
 			return fail(errors.New("tls: private key does not match public key"))
+		}
+	case *sm2.PublicKey:
+		priv, ok := cert.PrivateKey.(*sm2.PrivateKey)
+		if !ok {
+			return fail(errors.New("tls: sm2 private key type does not match public key type"))
+		}
+		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
+			return fail(errors.New("tls: sm2 private key does not match public key"))
 		}
 	default:
 		return fail(errors.New("tls: unknown public key algorithm"))
