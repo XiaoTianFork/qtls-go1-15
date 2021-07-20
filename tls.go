@@ -366,12 +366,12 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 			return fail(errors.New("tls: private key does not match public key"))
 		}
 	case *sm2.PublicKey:
-		priv, ok := cert.PrivateKey.(*ecdsa.PrivateKey)
+		priv, ok := cert.PrivateKey.(*sm2.PrivateKey)
 		if !ok {
-			return fail(errors.New("tls: private key type does not match public key type"))
+			return fail(errors.New("tls: sm2 private key type does not match public key type"))
 		}
 		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
-			return fail(errors.New("tls: private key does not match public key"))
+			return fail(errors.New("tls: sm2 private key does not match public key"))
 		}
 	default:
 		return fail(errors.New("tls: unknown public key algorithm"))
@@ -393,6 +393,9 @@ func X509KeyPairTLS(certPEMBlock, keyPEMBlock []byte) (tls.Certificate, error) {
 // OpenSSL ecparam generates SEC1 EC private keys for ECDSA. We try all three.
 func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 	if key, err := x509.ParsePKCS1PrivateKey(der); err == nil {
+		return key, nil
+	}
+	if key, err := x509.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
 		return key, nil
 	}
 	if key, err := x509.ParsePKCS8PrivateKey(der); err == nil {
