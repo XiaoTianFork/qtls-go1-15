@@ -18,6 +18,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"crypto/tls"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -368,6 +369,14 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 	}
 
 	return cert, nil
+}
+
+func X509KeyPairTLS(certPEMBlock, keyPEMBlock []byte) (tls.Certificate, error) {
+	pair, err := X509KeyPair(certPEMBlock, keyPEMBlock)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	return *toTlsCertificate(&pair), err
 }
 
 // Attempt to parse the given private key DER block. OpenSSL 0.9.8 generates

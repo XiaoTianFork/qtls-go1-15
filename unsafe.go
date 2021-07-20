@@ -24,6 +24,10 @@ func toClientSessionState(s *clientSessionState) *ClientSessionState {
 	return (*ClientSessionState)(unsafe.Pointer(s))
 }
 
+func toTlsCertificate(c *Certificate) *tls.Certificate {
+	return (*tls.Certificate)(unsafe.Pointer(c))
+}
+
 func fromClientSessionState(s *ClientSessionState) *clientSessionState {
 	return (*clientSessionState)(unsafe.Pointer(s))
 }
