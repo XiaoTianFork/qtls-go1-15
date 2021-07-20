@@ -366,12 +366,12 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (Certificate, error) {
 			return fail(errors.New("tls: private key does not match public key"))
 		}
 	case *sm2.PublicKey:
-		priv, ok := cert.PrivateKey.(*sm2.PrivateKey)
+		priv, ok := cert.PrivateKey.(*ecdsa.PrivateKey)
 		if !ok {
-			return fail(errors.New("tls: sm2 private key type does not match public key type"))
+			return fail(errors.New("tls: private key type does not match public key type"))
 		}
 		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
-			return fail(errors.New("tls: sm2 private key does not match public key"))
+			return fail(errors.New("tls: private key does not match public key"))
 		}
 	default:
 		return fail(errors.New("tls: unknown public key algorithm"))
