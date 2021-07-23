@@ -1,7 +1,7 @@
 github.com/golang/mock v1.4.4 h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=
 github.com/golang/mock v1.4.4/go.mod h1:l3mdAwkq5BuhzHwde/uurv3sEJeZMXNpwsxVWU71h+4=
-github.com/xiaotianfork/q-tls-common v0.0.4 h1:yOWxX4+4BgAb6JIgDXvFSHQBHrePOKxI2tD5nrphXoc=
-github.com/xiaotianfork/q-tls-common v0.0.4/go.mod h1:Ao5BDQJ1aJ0e/2izi2mPhtYviRiSeK3kBTQ/k8F+X98=
+github.com/xiaotianfork/q-tls-common v0.0.10 h1:1Pq17yny/nmKHc4AzBtdE/0mNjIeBJipHlBkVm/SChM=
+github.com/xiaotianfork/q-tls-common v0.0.10/go.mod h1:Ao5BDQJ1aJ0e/2izi2mPhtYviRiSeK3kBTQ/k8F+X98=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 h1:/UOmuWzQfxxo9UtlXMwuQU8CMgg1eZXqTRwkSQJWKOI=
 golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
